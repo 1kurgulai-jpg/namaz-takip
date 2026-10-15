@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nûr Vakit — Namaz & Kaza Takip Uygulaması</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+                    },
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                            950: '#022c22',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
+
+    <!-- Arka Plan Dekoratif Işıklar -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/3 -right-24 w-96 h-96 bg-teal-500/10 dark:bg-teal-500/5 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Üst Bar (Header) -->
+    <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/85 dark:bg-slate-900/85 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+            <!-- Logo & Başlık -->
+            <div class="flex items-center gap-3 shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
+                    <i data-lucide="moon-star" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg tracking-tight leading-none text-slate-900 dark:text-white">Nûr Vakit</h1>
+                    <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">Namaz & Kaza Takibi</p>
+                </div>
+            </div>
+
+            <!-- Sağ Kontroller: Şehir Seçimi + Seri Rozeti + Tema -->
+            <div class="flex items-center gap-2">
+                <!-- Şehir Seçme Menüsü -->
+                <div class="relative flex items-center">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-3 pointer-events-none"></i>
+                    <select id="citySelect" aria-label="Şehir Seçimi"
+                        class="pl-8 pr-7 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition">
+                        <!-- JS ile doldurulacak -->
+                    </select>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 pointer-events-none"></i>
+                </div>
+
+                <!-- Seri (Streak) Rozeti -->
+                <div id="streakBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold" title="5 vakit tam kılınan gün serisi">
+                    <i data-lucide="flame" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
+                    <span id="streakCount">0 Gün Seri</span>
+                </div>
+
+                <!-- Tema Değiştirici -->
+                <button id="themeToggle" type="button" aria-label="Temayı Değiştir"
+                    class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+                    <i data-lucide="sun" id="sunIcon" class="w-5 h-5 hidden"></i>
+                    <i data-lucide="moon" id="moonIcon" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Ana İçerik -->
+    <main class="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-16">
+
+        <!-- Canlı Saat, Aktif Vakit & Geri Sayım Paneli -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 relative overflow-hidden">
+            <!-- Üst Bilgi Satırı: Şehir, API Durumu ve Canlı Saat -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                <div class="flex items-center gap-2">
+                    <span id="apiStatusBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <span id="apiStatusDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="apiStatusText">Diyanet Vakitleri Yükleniyor...</span>
+                    </span>
+                    <button id="refreshTimingsBtn" type="button" title="Vakitleri Yenile"
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                        <i data-lucide="refresh-cw" id="refreshIcon" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+                    <i data-lucide="clock" class="w-4 h-4 text-emerald-500"></i>
+                    <span>Yerel Saat:</span>
+                    <span id="liveClock" class="font-mono font-bold text-slate-900 dark:text-white">--:--:--</span>
+                </div>
+            </div>
+
+            <!-- Orta Kısım: Şu Anki Vakit ve Sonraki Vakte Geri Sayım -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 items-center">
+                <!-- Sol: Aktif Vakit Bilgisi -->
+                <div class="space-y-1">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        Şu Anki Vakit Dilimi
+                    </p>
+                    <div class="flex items-center gap-2.5">
+                        <span id="currentVakitName" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                            --
+                        </span>
+                        <span id="currentVakitWindow" class="text-xs font-mono font-semibold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            --:-- - --:--
+                        </span>
+                    </div>
+                    <p id="currentVakitHint" class="text-xs text-slate-500 dark:text-slate-400">
+                        Vakit bilgisi hesaplanıyor...
+                    </p>
+                </div>
+
+                <!-- Sağ: Sonraki Vakte Geri Sayım Kutusu -->
+                <div class="bg-slate-50 dark:bg-slate-950/70 rounded-2xl p-4 border border-slate-200/70 dark:border-slate-800/80 flex flex-col sm:items-end justify-center">
+                    <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <i data-lucide="timer" class="w-3.5 h-3.5 text-amber-500"></i>
+                        <span id="nextVakitLabel">Sonraki Vakte Kalan Süre</span>
+                    </div>
+                    <div id="countdownDisplay" class="font-mono text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
+                        -- sa -- dk -- sn
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2.5">
+                        <div id="vakitTimeProgress" class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alt Kısım: 6 Resmi Vakit Özeti (İmsak, Güneş, Öğle, İkindi, Akşam, Yatsı) -->
+            <div id="sixTimingsGrid" class="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                <!-- JS tarafından doldurulacak -->
+            </div>
+        </section>
+
+        <!-- Takvim ve Gün Seçimi Kartı -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                <div>
+                    <span id="selectedDateBadge" class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-md mb-1">
+                        Bugün
+                    </span>
+                    <h2 id="selectedDateFormatted" class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                        15 Ekim 2026, Perşembe
+                    </h2>
+                </div>
+
+                <!-- Tarih Kontrolleri -->
+                <div class="flex items-center gap-1.5 self-start sm:self-auto">
+                    <button id="prevDayBtn" type="button" title="Önceki Gün"
+                        class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </button>
+
+                    <div class="relative">
+                        <input type="date" id="datePicker"
+                            class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer" />
+                    </div>
+
+                    <button id="nextDayBtn" type="button" title="Sonraki Gün"
+                        class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
+
+                    <button id="todayBtn" type="button"
+                        class="hidden px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-sm">
+                        Bugün
+                    </button>
+                </div>
+            </div>
+
+            <!-- Haftalık Hızlı Seçim Şeridi (7 Gün) -->
+            <div id="weekStrip" class="grid grid-cols-7 gap-1.5 sm:gap-2 pt-4">
+                <!-- JS tarafından doldurulacak -->
+            </div>
+        </section>
+
+        <!-- Günlük İlerleme Çubuğu (Progress Bar) -->
+        <section class="bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 dark:from-emerald-900/90 dark:via-emerald-900/70 dark:to-teal-950 rounded-2xl p-5 sm:p-6 text-white shadow-lg shadow-emerald-600/15 border border-emerald-500/20">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-bold text-base sm:text-lg">Günlük İlerleme Durumu</h3>
+                        <span id="completionBadge" class="hidden px-2 py-0.5 text-xs font-bold bg-white/20 backdrop-blur-sm rounded-full">
+                            Elhamdülillah Tamamlandı ✨
+                        </span>
+                    </div>
+                    <p id="progressSubtext" class="text-emerald-100 text-xs sm:text-sm mt-0.5">
+                        5'te 0 kılındı - %0
+                    </p>
+                </div>
+
+                <div class="flex items-baseline gap-2 self-start sm:self-auto">
+                    <span id="progressRatioText" class="text-2xl sm:text-3xl font-extrabold tracking-tight">5'te 0</span>
+                    <span id="progressPercentText" class="text-sm font-bold px-2.5 py-0.5 rounded-lg bg-black/20 text-emerald-100">
+                        %0
+                    </span>
+                </div>
+            </div>
+
+            <!-- Canlı İlerleme Çubuğu -->
+            <div class="w-full h-3.5 bg-black/25 rounded-full overflow-hidden p-0.5">
+                <div id="progressBarFill"
+                    class="h-full bg-gradient-to-r from-emerald-200 to-white rounded-full transition-all duration-500 ease-out"
+                    style="width: 0%">
+                </div>
+            </div>
+
+            <!-- Hızlı İşlem Satırı -->
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3 border-t border-white/15 text-xs text-emerald-100">
+                <span id="motivationalQuote" class="italic">
+                    "Muhakkak ki namaz, müminler üzerine vakitleri belirlenmiş bir farzdır." (Nisâ, 103)
+                </span>
+                <div class="flex items-center gap-2 ml-auto">
+                    <button id="markAllDoneBtn" type="button"
+                        class="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white font-medium transition flex items-center gap-1">
+                        <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                        Tümünü Kılındı İşaretle
+                    </button>
+                    <button id="resetDayBtn" type="button"
+                        class="px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-emerald-100 font-medium transition">
+                        Sıfırla
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sekmeler: Günlük 5 Vakit & Kaza Çetelesi -->
+        <div class="flex items-center justify-between">
+            <div class="inline-flex p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <button id="tabDailyBtn" type="button"
+                    class="px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-2">
+                    <i data-lucide="list-checks" class="w-4 h-4 text-emerald-500"></i>
+                    5 Vakit Namaz Listesi
+                </button>
+                <button id="tabKazaBtn" type="button"
+                    class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4"></i>
+                    Kaza Namazı Çetelesi
+                    <span id="totalKazaBadge" class="px-1.5 py-0.2 text-[11px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SEKME 1: 5 Vakit Namaz Listesi -->
+        <section id="dailySection" class="space-y-3">
+            <div id="prayerList" class="grid grid-cols-1 gap-3">
+                <!-- JS ile 5 vakit (Sabah, Öğle, İkindi, Akşam, Yatsı) buraya render edilir -->
+            </div>
+
+            <!-- Günlük Not Alanı -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm mt-4">
+                <label for="dailyNote" class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="notebook-pen" class="w-4 h-4 text-emerald-500"></i>
+                        Günün Notu / Tefekkür
+                    </span>
+                    <span id="noteSavedIndicator" class="text-emerald-500 opacity-0 transition-opacity duration-300 lowercase font-normal">kaydedildi ✓</span>
+                </label>
+                <textarea id="dailyNote" rows="2"
+                    placeholder="Bugün kıldığın namazlar, tesbihat veya kaza notların..."
+                    class="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"></textarea>
+            </div>
+        </section>
+
+        <!-- SEKME 2: Kaza Namazı Çetelesi -->
+        <section id="kazaSection" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Kaza Namazı Borç & Takip Çetelesi</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Geçmişten kalan kaza namazlarınızı vakit bazında ekleyip kıldıkça düşebilirsiniz.
+                        </p>
+                    </div>
+                    <button id="addFullDayKazaBtn" type="button"
+                        class="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold transition flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        +1 Günlük Kaza Ekle
+                    </button>
+                </div>
+
+                <div id="kazaList" class="divide-y divide-slate-100 dark:divide-slate-800/80 mt-2">
+                    <!-- JS ile Sabah, Öğle, İkindi, Akşam, Yatsı, Vitir kaza sayaçları -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Genel İstatistik Özeti -->
+        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Toplam Kılınan</p>
+                <p id="statTotalPrayed" class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">0 Vakit</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Tam Gün Sayısı</p>
+                <p id="statPerfectDays" class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">0 Gün</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Son 7 Gün Oranı</p>
+                <p id="statWeeklyRate" class="text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400 mt-1">%0</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Kalan Kaza Borcu</p>
+                <p id="statTotalKaza" class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">0 Vakit</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Alt Bilgi -->
+    <footer class="text-center py-6 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900">
+        Verileriniz tarayıcınızda (<code class="font-mono">localStorage</code>) güvenle saklanır • Resmi Diyanet hesaplama metodu (Aladhan API) ve Çevrimdışı Yedek Mod desteklidir.
+    </footer>
+
+    <!-- Uygulama Scripti -->
+    <script src="app.js"></script>
+</body>
+</html>

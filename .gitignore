@@ -1,0 +1,11 @@
+# OS ve Editör Dosyaları
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dağıtım ve Geçici Klasörler
+.vercel/
+.netlify/
+node_modules/
+*.log
