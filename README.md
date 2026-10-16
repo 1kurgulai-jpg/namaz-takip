@@ -1,4 +1,4 @@
-# 🌙 Nûr Vakit — Namaz & Kaza Takip Uygulaması
+# 🌙 BakVakitGeldi — Namaz & Kaza Takip Uygulaması
 
 Modern, mobil uyumlu (responsive), koyu/açık tema destekli ve resmi Diyanet namaz vakitleri entegrasyonuna sahip **Günlük Namaz ve Kaza Takip** web uygulaması.
 

@@ -1,5 +1,5 @@
 /**
- * Nûr Vakit — Namaz & Kaza Takip Uygulaması
+ * BakVakitGeldi — Namaz & Kaza Takip Uygulaması
  * Dinamik Namaz Vakitleri API (Aladhan Diyanet Method=13) + Çevrimdışı Yedek Mod + LocalStorage
  */
 
