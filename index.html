@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="tr" class="scroll-smooth">
+<html lang="tr" class="scroll-smooth overflow-x-hidden">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>BakVakitGeldi — Namaz, Vakit, Kıble & Kaza Takip Uygulaması</title>
     <!-- PWA & Mobil Uygulama Meta Etiketleri -->
     <meta name="theme-color" content="#059669">
@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BakVakitGeldi">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=7">
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
@@ -54,92 +54,92 @@
     <!-- Canvas Confetti (Quiz 5/5 Kutlaması İçin) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=7">
 </head>
-<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
 
     <!-- Arka Plan Dekoratif Işıklar -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl"></div>
-        <div class="absolute top-1/3 -right-24 w-96 h-96 bg-teal-500/10 dark:bg-teal-500/5 rounded-full blur-3xl"></div>
+        <div class="absolute -top-24 -left-24 w-72 sm:w-96 h-72 sm:h-96 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/3 -right-24 w-72 sm:w-96 h-72 sm:h-96 bg-teal-500/10 dark:bg-teal-500/5 rounded-full blur-3xl"></div>
     </div>
 
-    <!-- Bildirim / Uyarı Toast Alanı -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+    <!-- Bildirim / Uyarı Toast Alanı (Mobil Taşma Korumalı) -->
+    <div id="toastContainer" class="fixed bottom-4 inset-x-3 sm:left-auto sm:right-5 z-50 flex flex-col gap-2 sm:w-full sm:max-w-sm pointer-events-none"></div>
 
     <!-- Üst Bar (Header) -->
-    <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/85 dark:bg-slate-900/85 border-b border-slate-200/80 dark:border-slate-800/80">
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+    <header class="sticky top-0 z-30 w-full max-w-full overflow-hidden backdrop-blur-xl bg-white/85 dark:bg-slate-900/85 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div class="max-w-3xl w-full mx-auto px-3 sm:px-6 py-2.5 sm:py-0 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-2">
             <!-- Logo & Başlık -->
-            <div class="flex items-center gap-3 shrink-0">
-                <img src="logo.png?v=2" alt="BakVakitGeldi Logo" class="w-10 h-10 rounded-xl object-cover shadow-md border border-emerald-500/30 bg-white" />
-                <div>
-                    <h1 class="font-extrabold text-lg sm:text-xl tracking-tight leading-none">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                <img src="logo.png?v=2" alt="BakVakitGeldi Logo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover shadow-md border border-emerald-500/30 bg-white shrink-0" />
+                <div class="min-w-0">
+                    <h1 class="font-extrabold text-base sm:text-xl tracking-tight leading-none truncate">
                         <span class="bg-gradient-to-r from-emerald-500 via-teal-500 to-teal-700 dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-500 bg-clip-text text-transparent">Bak</span><span class="text-slate-800 dark:text-white">VakitGeldi</span>
                     </h1>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                        <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Namaz & Kaza Takibi</p>
-                        <span class="text-slate-300 dark:text-slate-700">•</span>
+                    <div class="flex items-center gap-1.5 mt-0.5 truncate">
+                        <p class="hidden sm:inline text-xs text-slate-500 dark:text-slate-400">Namaz & Kaza Takibi</p>
+                        <span class="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
                         <!-- Otomatik Bulut Senkronizasyon Rozeti -->
                         <button id="cloudStatusBtn" type="button" title="Şifresiz Otomatik Bulut Yedekleme Durumu"
-                            class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
-                            <i data-lucide="cloud-check" id="cloudStatusIcon" class="w-3 h-3"></i>
-                            <span id="cloudStatusText">Bulut Aktif</span>
+                            class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline truncate">
+                            <i data-lucide="cloud-check" id="cloudStatusIcon" class="w-3 h-3 shrink-0"></i>
+                            <span id="cloudStatusText" class="truncate">Bulut Aktif</span>
                         </button>
                     </div>
                 </div>
             </div>
 
             <!-- Sağ Kontroller: 81 İl Seçimi + Ana Ekrana Ekle + Ezan Bildirimi + Seri Rozeti + Tema -->
-            <div class="flex items-center gap-1.5 sm:gap-2">
+            <div class="flex items-center gap-1 sm:gap-2 shrink-0">
                 <!-- 81 İl Seçme Menüsü -->
                 <div class="relative flex items-center">
-                    <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-2.5 pointer-events-none"></i>
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400 absolute left-2 pointer-events-none"></i>
                     <select id="citySelect" aria-label="81 İl Şehir Seçimi"
-                        class="pl-8 pr-6 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition max-w-[130px] sm:max-w-[160px] truncate">
+                        class="pl-6 sm:pl-8 pr-5 sm:pr-6 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition w-[98px] sm:w-auto sm:max-w-[160px] truncate">
                         <!-- JS ile 81 İl alfabetik doldurulacak -->
                     </select>
-                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2 pointer-events-none"></i>
+                    <i data-lucide="chevron-down" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 absolute right-1.5 sm:right-2 pointer-events-none"></i>
                 </div>
 
                 <!-- Ana Ekrana Ekle (PWA) Üst Bar Kısayolu -->
                 <button id="headerInstallBtn" type="button" title="BakVakitGeldi Uygulamasını Ana Ekrana Ekle"
-                    class="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 transition-colors">
-                    <i data-lucide="download" class="w-5 h-5"></i>
+                    class="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 transition-colors shrink-0">
+                    <i data-lucide="download" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </button>
 
                 <!-- Ezan Vakti Bildirim Butonu -->
                 <button id="notificationToggleBtn" type="button" title="Ezan Vakti Bildirimlerini Aç / Kapat"
-                    class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors relative">
-                    <i data-lucide="bell" id="bellIcon" class="w-5 h-5"></i>
+                    class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors relative shrink-0">
+                    <i data-lucide="bell" id="bellIcon" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span id="notifActiveDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"></span>
                 </button>
 
                 <!-- Seri (Streak) Rozeti -->
-                <div id="streakBadge" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold" title="5 vakit tam kılınan gün serisi">
+                <div id="streakBadge" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold shrink-0" title="5 vakit tam kılınan gün serisi">
                     <i data-lucide="flame" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
                     <span id="streakCount">0 Gün Seri</span>
                 </div>
 
                 <!-- Tema Değiştirici -->
                 <button id="themeToggle" type="button" aria-label="Temayı Değiştir"
-                    class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
-                    <i data-lucide="sun" id="sunIcon" class="w-5 h-5 hidden"></i>
-                    <i data-lucide="moon" id="moonIcon" class="w-5 h-5"></i>
+                    class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shrink-0">
+                    <i data-lucide="sun" id="sunIcon" class="w-4 h-4 sm:w-5 sm:h-5 hidden"></i>
+                    <i data-lucide="moon" id="moonIcon" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Ana İçerik -->
-    <main class="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-16">
+    <main class="w-full max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-16 overflow-x-hidden">
 
         <!-- PWA (Ana Ekrana Ekleme) Bildirim Çubuğu -->
-        <section id="pwaInstallBanner" class="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 dark:from-slate-900 dark:via-emerald-950/90 dark:to-slate-900 text-white rounded-2xl p-4 sm:p-4.5 shadow-md border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <img src="logo.png?v=2" alt="BakVakitGeldi İkon" class="w-11 h-11 rounded-xl object-cover shadow-md bg-white shrink-0" />
-                <div>
-                    <div class="flex items-center gap-2">
+        <section id="pwaInstallBanner" class="w-full overflow-hidden bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 dark:from-slate-900 dark:via-emerald-950/90 dark:to-slate-900 text-white rounded-2xl p-3.5 sm:p-4 shadow-md border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="logo.png?v=2" alt="BakVakitGeldi İkon" class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover shadow-md bg-white shrink-0" />
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-1.5">
                         <h3 class="font-bold text-xs sm:text-sm">
                             <span class="text-emerald-400">Bak</span>VakitGeldi Uygulamasını Ana Ekrana Ekle
                         </h3>
@@ -152,14 +152,14 @@
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <div class="flex items-center justify-end gap-2 w-full sm:w-auto shrink-0">
                 <button id="pwaInstallActionBtn" type="button"
-                    class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
-                    <i data-lucide="smartphone" class="w-4 h-4"></i>
+                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="smartphone" class="w-4 h-4 shrink-0"></i>
                     <span>Ana Ekrana Ekle</span>
                 </button>
                 <button id="pwaBannerCloseBtn" type="button" title="Gizle"
-                    class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition">
+                    class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition shrink-0">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -321,48 +321,48 @@
         </section>
 
         <!-- Ana Sekmeler: 5 Vakit | Kaza | Kıble | Sure & Dualar | Zekat Hesapla | Dini Quiz -->
-        <div class="bg-slate-200/75 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
+        <div class="w-full overflow-hidden bg-slate-200/75 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-3 sm:grid-cols-6 gap-1.5">
             <button id="tabDailyBtn" type="button"
-                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-1.5">
+                class="min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1.5">
                 <i data-lucide="list-checks" class="w-4 h-4 text-emerald-500 shrink-0"></i>
                 <span class="truncate">5 Vakit</span>
             </button>
             <button id="tabKazaBtn" type="button"
-                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                class="min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
                 <i data-lucide="history" class="w-4 h-4 shrink-0"></i>
                 <span class="truncate">Kaza</span>
-                <span id="totalKazaBadge" class="px-1.5 py-0.2 text-[10px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">0</span>
+                <span id="totalKazaBadge" class="px-1.5 py-0.2 text-[10px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">0</span>
             </button>
             <button id="tabQiblaBtn" type="button"
-                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                class="min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
                 <i data-lucide="compass" class="w-4 h-4 text-amber-500 shrink-0"></i>
                 <span class="truncate">Kıble</span>
             </button>
             <button id="tabSurahsBtn" type="button"
-                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                class="min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
                 <i data-lucide="book-open" class="w-4 h-4 text-teal-500 shrink-0"></i>
                 <span class="truncate">Sure & Dua</span>
             </button>
             <button id="tabZekatBtn" type="button"
-                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                class="min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
                 <i data-lucide="coins" class="w-4 h-4 text-amber-500 shrink-0"></i>
                 <span class="truncate">Zekat</span>
             </button>
             <button id="tabQuizBtn" type="button"
-                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                class="min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
                 <i data-lucide="sparkles" class="w-4 h-4 text-emerald-500 shrink-0"></i>
                 <span class="truncate">Dini Quiz</span>
             </button>
         </div>
 
         <!-- SEKME 1: 5 Vakit Namaz Listesi -->
-        <section id="dailySection" class="space-y-3">
+        <section id="dailySection" class="space-y-3 w-full overflow-hidden">
             <div id="prayerList" class="grid grid-cols-1 gap-3">
                 <!-- JS ile 5 vakit (Sabah, Öğle, İkindi, Akşam, Yatsı) buraya render edilir -->
             </div>
 
             <!-- Günlük Not Alanı -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm mt-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm mt-4 overflow-hidden">
                 <label for="dailyNote" class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                     <span class="flex items-center gap-1.5">
                         <i data-lucide="notebook-pen" class="w-4 h-4 text-emerald-500"></i>
@@ -377,8 +377,8 @@
         </section>
 
         <!-- SEKME 2: Kaza Namazı Çetelesi -->
-        <section id="kazaSection" class="hidden space-y-4">
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <section id="kazaSection" class="hidden space-y-4 w-full overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
                         <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Kaza Namazı Borç & Takip Çetelesi</h3>
@@ -387,7 +387,7 @@
                         </p>
                     </div>
                     <button id="addFullDayKazaBtn" type="button"
-                        class="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold transition flex items-center gap-1.5">
+                        class="self-start sm:self-auto px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold transition flex items-center gap-1.5">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i>
                         +1 Günlük Kaza Ekle
                     </button>
@@ -400,12 +400,12 @@
         </section>
 
         <!-- SEKME 3: Kıble Pusulası -->
-        <section id="qiblaSection" class="hidden space-y-4">
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <section id="qiblaSection" class="hidden space-y-4 w-full overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
                 <!-- Üst Başlık ve Konum Kontrolleri -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">İnteraktif Kıble Pusulası</h3>
                             <span id="qiblaAlignedBadge" class="hidden px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 animate-pulse">
                                 Kıble Hizalandı 🕋
@@ -418,26 +418,26 @@
 
                     <div class="flex flex-wrap items-center gap-2">
                         <button id="enableCompassBtn" type="button"
-                            class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                            class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
                             <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
                             <span id="enableCompassBtnText">Sensörü Başlat</span>
                         </button>
                         <button id="gpsQiblaBtn" type="button"
-                            class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200/80 dark:border-slate-700">
+                            class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200/80 dark:border-slate-700">
                             <i data-lucide="locate-fixed" class="w-3.5 h-3.5 text-emerald-500"></i>
                             <span>GPS Konumu Al</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Pusula Kadranı -->
-                <div class="py-8 flex flex-col items-center justify-center">
+                <!-- Pusula Kadranı (Dönüş Taşma Korumalı) -->
+                <div class="py-6 sm:py-8 flex flex-col items-center justify-center overflow-hidden">
                     <div class="mb-3 flex flex-col items-center">
                         <div id="qiblaTopPointer" class="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[16px] border-b-emerald-500 transition-colors"></div>
                         <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-1">Cihaz Yönü</span>
                     </div>
 
-                    <div id="compassOuterRing" class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border-4 border-slate-200 dark:border-slate-800 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 shadow-inner flex items-center justify-center transition-all duration-300">
+                    <div id="compassOuterRing" class="relative w-60 h-60 sm:w-72 sm:h-72 rounded-full border-4 border-slate-200 dark:border-slate-800 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 shadow-inner flex items-center justify-center overflow-hidden transition-all duration-300">
                         <div id="compassDial" class="relative w-full h-full rounded-full transition-transform duration-150 ease-out" style="transform: rotate(0deg);">
                             <span class="absolute top-3 left-1/2 -translate-x-1/2 font-extrabold text-sm text-rose-500">K (N)</span>
                             <span class="absolute bottom-3 left-1/2 -translate-x-1/2 font-bold text-xs text-slate-400">G (S)</span>
@@ -451,7 +451,7 @@
                                     <div class="w-9 h-9 -mt-2 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center font-bold text-base border-2 border-white dark:border-slate-900">
                                         🕋
                                     </div>
-                                    <div class="w-1.5 h-20 bg-gradient-to-b from-amber-500 to-emerald-500 rounded-full"></div>
+                                    <div class="w-1.5 h-16 sm:h-20 bg-gradient-to-b from-amber-500 to-emerald-500 rounded-full"></div>
                                 </div>
                             </div>
                         </div>
@@ -462,25 +462,25 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-3 w-full max-w-md mt-6">
-                        <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
+                    <div class="grid grid-cols-3 gap-2 sm:gap-3 w-full max-w-md mt-6">
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 sm:p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
                             <p class="text-[11px] text-slate-400 font-medium">Kıble Açısı</p>
-                            <p id="qiblaAngleValue" class="font-mono text-base sm:text-lg font-extrabold text-amber-500 mt-0.5">151.6°</p>
+                            <p id="qiblaAngleValue" class="font-mono text-sm sm:text-lg font-extrabold text-amber-500 mt-0.5">151.6°</p>
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 sm:p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
                             <p class="text-[11px] text-slate-400 font-medium">Cihaz Yönü</p>
-                            <p id="deviceHeadingValue" class="font-mono text-base sm:text-lg font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">0.0°</p>
+                            <p id="deviceHeadingValue" class="font-mono text-sm sm:text-lg font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">0.0°</p>
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 sm:p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
                             <p class="text-[11px] text-slate-400 font-medium">Hedef Farkı</p>
-                            <p id="qiblaDiffValue" class="font-mono text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">--°</p>
+                            <p id="qiblaDiffValue" class="font-mono text-sm sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">--°</p>
                         </div>
                     </div>
 
                     <div class="w-full max-w-md mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80">
-                        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+                        <div class="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1.5">
                             <span id="compassSensorStatus">Pusula sensörü olmayan cihazlar için manuel yön testi:</span>
-                            <span id="manualSliderLabel" class="font-mono font-semibold">0°</span>
+                            <span id="manualSliderLabel" class="font-mono font-semibold shrink-0">0°</span>
                         </div>
                         <input id="manualCompassSlider" type="range" min="0" max="359" value="0"
                             class="w-full accent-emerald-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg" />
@@ -490,13 +490,13 @@
         </section>
 
         <!-- SEKME 4: Namaz Sureleri ve Duaları -->
-        <section id="surahsSection" class="hidden space-y-4">
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <section id="surahsSection" class="hidden space-y-4 w-full overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4 overflow-hidden">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
                     <div>
                         <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
-                            <i data-lucide="book-open-check" class="w-5 h-5 text-emerald-500"></i>
-                            Namaz Sureleri ve Duaları Rehberi
+                            <i data-lucide="book-open-check" class="w-5 h-5 text-emerald-500 shrink-0"></i>
+                            <span>Namaz Sureleri ve Duaları Rehberi</span>
                         </h3>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                             Üzerine tıklayarak Arapça yazılışını, Türkçe okunuşunu ve mealini görüntüleyin.
@@ -520,7 +520,7 @@
                 <!-- Arama Kutusu -->
                 <div class="relative">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                    <input id="surahSearchInput" type="text" placeholder="Sure veya dua ara (Örn: Fatiha, İhlas, Tahiyyat, Sübhaneke)..."
+                    <input id="surahSearchInput" type="text" placeholder="Sure veya dua ara (Örn: Fatiha, İhlas, Tahiyyat)..."
                         class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
                 </div>
 
@@ -532,12 +532,12 @@
         </section>
 
         <!-- SEKME 5: Akıllı Zekat Hesaplama (Canlı Kurlar) -->
-        <section id="zekatSection" class="hidden space-y-4">
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+        <section id="zekatSection" class="hidden space-y-4 w-full overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5 overflow-hidden">
                 <!-- Üst Başlık ve Canlı Kur Durumu -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-                    <div>
-                        <div class="flex items-center gap-2">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
                             <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Akıllı Zekat Hesaplama</h3>
                             <span id="zekatRateStatusBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                 Canlı Piyasa Kurları
@@ -549,7 +549,7 @@
                     </div>
 
                     <button id="refreshRatesBtn" type="button"
-                        class="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5">
+                        class="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shrink-0">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-500"></i>
                         <span>Kurları Güncelle</span>
                     </button>
@@ -557,33 +557,33 @@
 
                 <!-- Canlı Kur Özeti (İsteğe Bağlı Düzenlenebilir) -->
                 <div>
-                    <div class="flex items-center justify-between mb-2">
+                    <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
                         <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Anlık Piyasa Birim Kurları (₺) — İsterseniz Düzenleyebilirsiniz</span>
                         <span id="zekatLastUpdatedTime" class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400"></span>
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-amber-500/30 dark:border-amber-500/20">
-                            <label for="rateGoldInput" class="block text-[10px] font-bold text-amber-600 dark:text-amber-400">24 Ayar Gram Altın (₺)</label>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-amber-500/30 dark:border-amber-500/20 min-w-0">
+                            <label for="rateGoldInput" class="block text-[10px] font-bold text-amber-600 dark:text-amber-400 truncate">24 Ayar Gram Altın (₺)</label>
                             <input id="rateGoldInput" type="number" step="0.01" min="0"
                                 class="w-full mt-1 bg-transparent font-mono font-extrabold text-sm text-slate-900 dark:text-white focus:outline-none" />
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-amber-500/30 dark:border-amber-500/20">
-                            <label for="rateQuarterGoldInput" class="block text-[10px] font-bold text-amber-600 dark:text-amber-400">Çeyrek Altın (₺)</label>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-amber-500/30 dark:border-amber-500/20 min-w-0">
+                            <label for="rateQuarterGoldInput" class="block text-[10px] font-bold text-amber-600 dark:text-amber-400 truncate">Çeyrek Altın (₺)</label>
                             <input id="rateQuarterGoldInput" type="number" step="0.01" min="0"
                                 class="w-full mt-1 bg-transparent font-mono font-extrabold text-sm text-slate-900 dark:text-white focus:outline-none" />
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
-                            <label for="rateSilverInput" class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400">Gram Gümüş (₺)</label>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800 min-w-0">
+                            <label for="rateSilverInput" class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate">Gram Gümüş (₺)</label>
                             <input id="rateSilverInput" type="number" step="0.01" min="0"
                                 class="w-full mt-1 bg-transparent font-mono font-bold text-sm text-slate-900 dark:text-white focus:outline-none" />
                         </div>
-                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
-                            <label for="rateUsdInput" class="block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">1 ABD Doları ($ → ₺)</label>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800 min-w-0">
+                            <label for="rateUsdInput" class="block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">1 ABD Doları ($ → ₺)</label>
                             <input id="rateUsdInput" type="number" step="0.01" min="0"
                                 class="w-full mt-1 bg-transparent font-mono font-bold text-sm text-slate-900 dark:text-white focus:outline-none" />
                         </div>
-                        <div class="col-span-2 sm:col-span-1 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
-                            <label for="rateEurInput" class="block text-[10px] font-semibold text-teal-600 dark:text-teal-400">1 Euro (€ → ₺)</label>
+                        <div class="col-span-2 sm:col-span-1 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800 min-w-0">
+                            <label for="rateEurInput" class="block text-[10px] font-semibold text-teal-600 dark:text-teal-400 truncate">1 Euro (€ → ₺)</label>
                             <input id="rateEurInput" type="number" step="0.01" min="0"
                                 class="w-full mt-1 bg-transparent font-mono font-bold text-sm text-slate-900 dark:text-white focus:outline-none" />
                         </div>
@@ -671,31 +671,31 @@
                 </div>
 
                 <!-- Zekat Sonuç & Nisap Karşılaştırma Kartı -->
-                <div id="zekatResultBox" class="rounded-2xl p-5 bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-lg space-y-4">
+                <div id="zekatResultBox" class="rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-lg space-y-4 overflow-hidden">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/15">
-                        <div>
+                        <div class="min-w-0">
                             <span id="zekatNisapStatusBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
                                 Varlık Giriniz
                             </span>
-                            <p id="zekatNisapThresholdText" class="text-xs text-emerald-100 mt-1">
+                            <p id="zekatNisapThresholdText" class="text-xs text-emerald-100 mt-1 break-words">
                                 Nisap Alt Sınırı (80.18 gr Altın): ₺0,00
                             </p>
                         </div>
                         <button id="zekatClearBtn" type="button"
-                            class="self-start sm:self-auto px-3 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-xs font-semibold text-emerald-100 transition">
+                            class="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-black/20 hover:bg-black/30 text-xs font-semibold text-emerald-100 transition shrink-0">
                             Formu Temizle
                         </button>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                        <div>
+                        <div class="min-w-0">
                             <p class="text-xs text-emerald-100 font-medium">Toplam Net Varlığınız</p>
-                            <p id="zekatTotalNetWorth" class="font-mono text-2xl sm:text-3xl font-extrabold mt-0.5">₺0,00</p>
+                            <p id="zekatTotalNetWorth" class="font-mono text-xl sm:text-3xl font-extrabold mt-0.5 break-all sm:break-normal">₺0,00</p>
                         </div>
-                        <div class="bg-black/20 rounded-xl p-4 border border-white/10">
+                        <div class="bg-black/20 rounded-xl p-3.5 sm:p-4 border border-white/10 min-w-0">
                             <p class="text-xs text-amber-200 font-semibold uppercase tracking-wide">Ödenmesi Gereken Net Zekat (%2.5)</p>
-                            <p id="zekatPayableAmount" class="font-mono text-2xl sm:text-3xl font-extrabold text-white mt-1">₺0,00</p>
-                            <p id="zekatPayableSub" class="text-[11px] text-emerald-100 mt-1">
+                            <p id="zekatPayableAmount" class="font-mono text-xl sm:text-3xl font-extrabold text-white mt-1 break-all sm:break-normal">₺0,00</p>
+                            <p id="zekatPayableSub" class="text-[11px] text-emerald-100 mt-1 break-words">
                                 Nisap sınırını aştığında 40'ta 1 (%2,5) oranında hesaplanır.
                             </p>
                         </div>
@@ -705,12 +705,12 @@
         </section>
 
         <!-- SEKME 6: Günlük Dini Bilgi Quizi -->
-        <section id="quizSection" class="hidden space-y-4">
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+        <section id="quizSection" class="hidden space-y-4 w-full overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5 overflow-hidden">
                 <!-- Üst Başlık -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
-                    <div>
-                        <div class="flex items-center gap-2">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
                             <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Günlük Dini Bilgi Quizi</h3>
                             <span id="quizProgressBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                 Soru 1 / 5
@@ -722,7 +722,7 @@
                     </div>
 
                     <button id="restartQuizBtn" type="button"
-                        class="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5">
+                        class="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shrink-0">
                         <i data-lucide="shuffle" class="w-3.5 h-3.5 text-emerald-500"></i>
                         <span>Yeni 5 Soru Getir</span>
                     </button>
@@ -734,7 +734,7 @@
                         <span id="quizCategoryTag" class="inline-block text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1.5">
                             Fıkıh & İbadet
                         </span>
-                        <h4 id="quizQuestionText" class="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-snug">
+                        <h4 id="quizQuestionText" class="font-bold text-sm sm:text-lg text-slate-900 dark:text-white leading-snug break-words">
                             Soru yükleniyor...
                         </h4>
                     </div>
@@ -746,10 +746,10 @@
 
                     <!-- Açıklama & Sonraki Soru Satırı -->
                     <div id="quizFeedbackBox" class="hidden p-4 rounded-xl border text-xs sm:text-sm space-y-2">
-                        <p id="quizFeedbackText" class="font-medium"></p>
+                        <p id="quizFeedbackText" class="font-medium break-words"></p>
                         <div class="flex justify-end">
                             <button id="quizNextBtn" type="button"
-                                class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+                                class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
                                 <span id="quizNextBtnLabel">Sonraki Soru</span>
                                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
                             </button>
@@ -762,11 +762,11 @@
                     <div id="quizResultBadgeIcon" class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-amber-400 via-emerald-500 to-teal-600 text-white flex items-center justify-center text-4xl shadow-xl shadow-emerald-500/20">
                         🌟
                     </div>
-                    <div class="space-y-1.5">
+                    <div class="space-y-1.5 px-2">
                         <span id="quizWinnerPill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                             🏆 Günün Âlimi Rozeti Kazanıldı!
                         </span>
-                        <h4 id="quizResultTitle" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+                        <h4 id="quizResultTitle" class="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white break-words">
                             Tebrikler! Bugünün sınavını başarıyla geçtin 🌟
                         </h4>
                         <p id="quizResultSubtitle" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
@@ -785,15 +785,15 @@
         </section>
 
         <!-- Ezan Bildirimleri, Zarif Sesli Uyarı & Otomatik Bulut Yedekleme Durum Kartı -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <section class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full overflow-hidden">
             <!-- Ezan Vakti Bildirim & Zarif Ses Efekti Kartı -->
-            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3 overflow-hidden">
                 <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
                         <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                             <i data-lucide="bell-ring" class="w-5 h-5"></i>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <h4 class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">Ezan Bildirimi & Ses Efekti</h4>
                             <p id="notifCardSubtext" class="text-[11px] text-slate-500 dark:text-slate-400">
                                 Vakit girdiğinde bildirim ve zarif ses uyarısı alın.
@@ -808,7 +808,7 @@
 
                 <!-- İsteğe Bağlı Hafif Sesli Uyarı / Efekt Seçimi -->
                 <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex flex-wrap items-center gap-1.5">
                         <button id="soundToggleBtn" type="button" title="Bildirim Sesini Aç / Kapat"
                             class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-xs font-semibold flex items-center gap-1.5 transition">
                             <i data-lucide="volume-2" id="soundToggleIcon" class="w-3.5 h-3.5"></i>
@@ -832,7 +832,7 @@
             </div>
 
             <!-- Şifresiz Otomatik Bulut Yedekleme Kartı -->
-            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-3">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-3 overflow-hidden">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -859,7 +859,7 @@
         </section>
 
         <!-- Genel İstatistik Özeti -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 w-full overflow-hidden">
             <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
                 <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Toplam Kılınan</p>
                 <p id="statTotalPrayed" class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">0 Vakit</p>
@@ -881,16 +881,16 @@
     </main>
 
     <!-- Alt Bilgi -->
-    <footer class="text-center py-6 px-4 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900 space-y-1">
+    <footer class="w-full max-w-full overflow-hidden text-center py-6 px-4 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900 space-y-1">
         <div>
             <span class="font-bold"><span class="text-emerald-600 dark:text-emerald-400">Bak</span><span class="text-slate-700 dark:text-slate-300">VakitGeldi</span></span> • 81 İl Diyanet Namaz Vakitleri • Kıble Pusulası • Ezan Bildirimleri
         </div>
-        <div class="text-[11px]">
+        <div class="text-[11px] break-all sm:break-normal">
             Şifresiz Bulut Yedekleme Kimliği: <code id="footerDeviceUuid" class="font-mono text-slate-500 dark:text-slate-400">yükleniyor...</code>
         </div>
     </footer>
 
     <!-- Uygulama Scripti -->
-    <script src="app.js"></script>
+    <script src="app.js?v=7"></script>
 </body>
 </html>

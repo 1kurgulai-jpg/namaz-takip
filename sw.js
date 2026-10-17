@@ -1,20 +1,20 @@
 /**
  * BakVakitGeldi — PWA Service Worker (sw.js)
- * Çevrimdışı çalışma (Offline Cache) ve Bildirim tıklama yönetimi sağlar.
+ * - Ana ekrana eklenen PWA simgesine tıklandığında Vercel'deki en güncel sürümü anında çeker (Network-First + no-cache).
+ * - İnternet olmadığında çevrimdışı (Offline Cache) çalışmaya devam eder.
  */
 
-const CACHE_NAME = 'bakvakitgeldi-pwa-v6';
+const CACHE_NAME = 'bakvakitgeldi-pwa-v7';
 const CORE_ASSETS = [
     './',
     './index.html',
-    './style.css',
-    './app.js',
-    './manifest.json',
-    './logo.png',
+    './style.css?v=7',
+    './app.js?v=7',
+    './manifest.json?v=7',
     './logo.png?v=2'
 ];
 
-// Kurulum: Temel uygulama dosyalarını önbelleğe al
+// Kurulum: Beklemeden yeni Service Worker'ı devreye al
 self.addEventListener('install', (event) => {
     self.skipWaiting();
     event.waitUntil(
@@ -22,7 +22,14 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Aktivasyon: Eski önbellekleri temizle
+// İstemciden gelen SKIP_WAITING mesajını dinle
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
+// Aktivasyon: Tüm eski önbellekleri temizle ve açık tüm PWA pencerelerini hemen devral
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
@@ -38,21 +45,26 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Ağ İstekleri: Önce Ağ, Çevrimdışıysa Önbellek
+// Ağ İstekleri: Uygulama dosyaları için her zaman önce Vercel canlı sunucusundan güncel hali çek (no-cache),
+// yalnızca internet yoksa önbellekten (Offline Cache) yanıt ver.
 self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
 
+    const isSameOrigin = req.url.startsWith(self.location.origin);
+
     event.respondWith(
-        fetch(req)
+        fetch(req, isSameOrigin ? { cache: 'no-cache' } : undefined)
             .then((networkRes) => {
-                if (networkRes && networkRes.status === 200 && req.url.startsWith(self.location.origin)) {
+                if (networkRes && networkRes.status === 200 && isSameOrigin) {
                     const resClone = networkRes.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone)).catch(() => null);
                 }
                 return networkRes;
             })
-            .catch(() => caches.match(req).then((cachedRes) => cachedRes || caches.match('./index.html')))
+            .catch(() =>
+                caches.match(req, { ignoreSearch: true }).then((cachedRes) => cachedRes || caches.match('./index.html'))
+            )
     );
 });
 
@@ -67,7 +79,7 @@ self.addEventListener('notificationclick', (event) => {
                 }
             }
             if (self.clients.openWindow) {
-                return self.clients.openWindow('./index.html');
+                return self.clients.openWindow('./');
             }
             return null;
         })

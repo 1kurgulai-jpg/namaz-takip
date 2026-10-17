@@ -1848,9 +1848,43 @@ function initPWA() {
     const headerBtn = document.getElementById('headerInstallBtn');
     const bannerSubtext = document.getElementById('pwaBannerSubtext');
 
-    // Service Worker Kaydı
+    // Service Worker Kaydı & Ana Ekran PWA Anlık Güncelleme Senkronizasyonu
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => null);
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+        });
+
+        navigator.serviceWorker
+            .register('./sw.js?v=7', { updateViaCache: 'none' })
+            .then((reg) => {
+                // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
+                reg.update().catch(() => null);
+
+                if (reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    if (!newWorker) return;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    });
+                });
+
+                // Kullanıcı ana ekrandan uygulamaya her döndüğünde güncellemeyi kontrol et
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        reg.update().catch(() => null);
+                    }
+                });
+            })
+            .catch(() => null);
     }
 
     // Zaten uygulama olarak (Ana Ekrandan) açıldıysa kurulum çubuğunu gizle
@@ -2160,34 +2194,34 @@ function renderSurahList() {
                 </div>
             </button>
 
-            <div class="${isExpanded ? 'block' : 'hidden'} px-4 pb-5 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-4">
+            <div class="${isExpanded ? 'block' : 'hidden'} px-4 pb-5 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-4 overflow-hidden">
                 <!-- Arapça Metin Kartı -->
-                <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/70 dark:border-slate-800">
-                    <div class="flex items-center justify-between mb-2">
+                <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/70 dark:border-slate-800 overflow-hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
                         <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Arapça Yazılışı</span>
-                        <span class="text-[11px] text-slate-400">${item.info}</span>
+                        <span class="text-[11px] text-slate-400 break-words">${item.info}</span>
                     </div>
-                    <p dir="rtl" lang="ar" class="font-arabic text-2xl sm:text-3xl leading-[2.2] text-right text-slate-900 dark:text-slate-100">
+                    <p dir="rtl" lang="ar" class="font-arabic text-2xl sm:text-3xl leading-[2.2] text-right text-slate-900 dark:text-slate-100 break-words">
                         ${item.arabic}
                     </p>
                 </div>
 
                 <!-- Türkçe Okunuşu -->
-                <div class="p-4 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/30 border border-emerald-500/20">
+                <div class="p-4 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/30 border border-emerald-500/20 overflow-hidden">
                     <span class="block text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">
                         Türkçe Okunuşu
                     </span>
-                    <p class="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed italic">
+                    <p class="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed italic break-words">
                         "${item.pronunciation}"
                     </p>
                 </div>
 
                 <!-- Türkçe Meali / Anlamı -->
-                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800">
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800 overflow-hidden">
                     <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                         Türkçe Meali (Anlamı)
                     </span>
-                    <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                    <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed break-words">
                         ${item.meaning}
                     </p>
                 </div>
@@ -2761,8 +2795,8 @@ function switchMainTab(tabName) {
         }
     };
 
-    const activeClass = 'justify-center px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1.5';
-    const inactiveClass = 'justify-center px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
+    const activeClass = 'min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1.5';
+    const inactiveClass = 'min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
 
     Object.keys(tabs).forEach((key) => {
         const item = tabs[key];
