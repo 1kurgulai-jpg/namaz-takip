@@ -3,14 +3,15 @@
  * Çevrimdışı çalışma (Offline Cache) ve Bildirim tıklama yönetimi sağlar.
  */
 
-const CACHE_NAME = 'bakvakitgeldi-pwa-v2';
+const CACHE_NAME = 'bakvakitgeldi-pwa-v4';
 const CORE_ASSETS = [
     './',
     './index.html',
     './style.css',
     './app.js',
     './manifest.json',
-    './icon.svg'
+    './logo.png',
+    './logo.png?v=2'
 ];
 
 // Kurulum: Temel uygulama dosyalarını önbelleğe al
@@ -37,7 +38,7 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Ağ İstekleri: Önce Ağ, Çevrimdışıysa Önbellek (Stale-While-Revalidate / Network-First)
+// Ağ İstekleri: Önce Ağ, Çevrimdışıysa Önbellek
 self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
@@ -45,7 +46,6 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(req)
             .then((networkRes) => {
-                // Kendi statik dosyalarımızı güncel önbelleğe yaz
                 if (networkRes && networkRes.status === 200 && req.url.startsWith(self.location.origin)) {
                     const resClone = networkRes.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone)).catch(() => null);

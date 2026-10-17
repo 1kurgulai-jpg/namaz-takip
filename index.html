@@ -11,8 +11,9 @@
     <meta name="apple-mobile-web-app-title" content="BakVakitGeldi">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="icon.svg">
-    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="icon" type="image/png" href="logo.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="logo.png?v=2">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -68,12 +69,10 @@
         <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
             <!-- Logo & Başlık -->
             <div class="flex items-center gap-3 shrink-0">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
-                    <i data-lucide="moon-star" class="w-5 h-5"></i>
-                </div>
+                <img src="logo.png?v=2" alt="BakVakitGeldi Logo" class="w-10 h-10 rounded-xl object-cover shadow-md border border-emerald-500/30 bg-white" />
                 <div>
                     <h1 class="font-extrabold text-lg sm:text-xl tracking-tight leading-none">
-                        <span class="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 dark:from-amber-400 dark:via-orange-400 dark:to-rose-400 bg-clip-text text-transparent">Bak</span><span class="text-slate-900 dark:text-white">VakitGeldi</span>
+                        <span class="bg-gradient-to-r from-emerald-500 via-teal-500 to-teal-700 dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-500 bg-clip-text text-transparent">Bak</span><span class="text-slate-800 dark:text-white">VakitGeldi</span>
                     </h1>
                     <div class="flex items-center gap-1.5 mt-0.5">
                         <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Namaz & Kaza Takibi</p>
@@ -135,11 +134,11 @@
         <!-- PWA (Ana Ekrana Ekleme) Bildirim Çubuğu -->
         <section id="pwaInstallBanner" class="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 dark:from-slate-900 dark:via-emerald-950/90 dark:to-slate-900 text-white rounded-2xl p-4 sm:p-4.5 shadow-md border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <img src="icon.svg" alt="BakVakitGeldi İkon" class="w-11 h-11 rounded-xl shadow-md shrink-0" />
+                <img src="logo.png?v=2" alt="BakVakitGeldi İkon" class="w-11 h-11 rounded-xl object-cover shadow-md bg-white shrink-0" />
                 <div>
                     <div class="flex items-center gap-2">
                         <h3 class="font-bold text-xs sm:text-sm">
-                            <span class="text-amber-400">Bak</span>VakitGeldi Uygulamasını Ana Ekrana Ekle
+                            <span class="text-emerald-400">Bak</span>VakitGeldi Uygulamasını Ana Ekrana Ekle
                         </h3>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                             PWA Uygulama
@@ -585,7 +584,7 @@
     <!-- Alt Bilgi -->
     <footer class="text-center py-6 px-4 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900 space-y-1">
         <div>
-            <span class="font-bold"><span class="text-amber-500 dark:text-amber-400">Bak</span><span class="text-slate-700 dark:text-slate-300">VakitGeldi</span></span> • 81 İl Diyanet Namaz Vakitleri • Kıble Pusulası • Ezan Bildirimleri
+            <span class="font-bold"><span class="text-emerald-600 dark:text-emerald-400">Bak</span><span class="text-slate-700 dark:text-slate-300">VakitGeldi</span></span> • 81 İl Diyanet Namaz Vakitleri • Kıble Pusulası • Ezan Bildirimleri
         </div>
         <div class="text-[11px]">
             Şifresiz Bulut Yedekleme Kimliği: <code id="footerDeviceUuid" class="font-mono text-slate-500 dark:text-slate-400">yükleniyor...</code>

@@ -871,21 +871,21 @@ function sendEzanNotification(title, bodyText, forceSound = false) {
                 navigator.serviceWorker.ready.then((reg) => {
                     reg.showNotification(`BakVakitGeldi — ${title}`, {
                         body: bodyText,
-                        icon: 'icon.svg',
-                        badge: 'icon.svg',
+                        icon: 'logo.png',
+                        badge: 'logo.png',
                         tag: `bakvakitgeldi-${Date.now()}`
                     });
                 }).catch(() => {
                     new Notification(`BakVakitGeldi — ${title}`, {
                         body: bodyText,
-                        icon: 'icon.svg',
+                        icon: 'logo.png',
                         tag: `bakvakitgeldi-${Date.now()}`
                     });
                 });
             } else {
                 new Notification(`BakVakitGeldi — ${title}`, {
                     body: bodyText,
-                    icon: 'icon.svg',
+                    icon: 'logo.png',
                     tag: `bakvakitgeldi-${Date.now()}`
                 });
             }
