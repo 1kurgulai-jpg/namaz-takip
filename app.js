@@ -1858,7 +1858,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=8', { updateViaCache: 'none' })
+            .register('./sw.js?v=9', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -2795,8 +2795,8 @@ function switchMainTab(tabName) {
         }
     };
 
-    const activeClass = 'min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1.5';
-    const inactiveClass = 'min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
+    const activeClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1.5';
+    const inactiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
 
     Object.keys(tabs).forEach((key) => {
         const item = tabs[key];
@@ -2816,6 +2816,10 @@ function switchMainTab(tabName) {
         renderSurahList();
     } else if (tabName === 'zekat') {
         calculateZekat();
+    }
+
+    if (window.scrollY > 40) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
