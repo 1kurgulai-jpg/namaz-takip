@@ -3,7 +3,7 @@
  * Çevrimdışı çalışma (Offline Cache) ve Bildirim tıklama yönetimi sağlar.
  */
 
-const CACHE_NAME = 'bakvakitgeldi-pwa-v5';
+const CACHE_NAME = 'bakvakitgeldi-pwa-v6';
 const CORE_ASSETS = [
     './',
     './index.html',

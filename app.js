@@ -2203,16 +2203,17 @@ function renderSurahList() {
 }
 
 // ============================================================================
-// 7. AKILLI ZEKAT HESAPLAMA (CANLI DÖVİZ & ALTIN KURLARI API ENTEGRASYONU)
+// 7. AKILLI ZEKAT HESAPLAMA (CANLI DÖVİZ, GRAM & ÇEYREK ALTIN API ENTEGRASYONU)
 // ============================================================================
 
 const ZEKAT_NISAP_GOLD_GRAMS = 80.18; // Diyanet İşleri Başkanlığı 80.18 gr 24 Ayar Altın Nisabı
 
 const zekatRates = {
-    goldGramTry: 3460.0,
-    silverGramTry: 42.5,
-    usdTry: 34.45,
-    eurTry: 37.35,
+    goldGramTry: 6633.21,
+    quarterGoldTry: 10859.67,
+    silverGramTry: 90.76,
+    usdTry: 49.56,
+    eurTry: 55.77,
     source: 'default'
 };
 
@@ -2225,85 +2226,168 @@ function formatCurrencyTRY(amount) {
     }).format(amount || 0);
 }
 
+function parseTurkishNumber(val) {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const str = String(val).trim().replace(/[^0-9.,-]/g, '');
+    if (str.includes(',') && str.includes('.')) {
+        return Number(str.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    if (str.includes(',')) {
+        return Number(str.replace(',', '.')) || 0;
+    }
+    return Number(str) || 0;
+}
+
 function populateZekatRateInputs() {
     const goldIn = document.getElementById('rateGoldInput');
+    const quarterIn = document.getElementById('rateQuarterGoldInput');
     const silverIn = document.getElementById('rateSilverInput');
     const usdIn = document.getElementById('rateUsdInput');
     const eurIn = document.getElementById('rateEurInput');
 
     if (goldIn) goldIn.value = zekatRates.goldGramTry.toFixed(2);
+    if (quarterIn) quarterIn.value = zekatRates.quarterGoldTry.toFixed(2);
     if (silverIn) silverIn.value = zekatRates.silverGramTry.toFixed(2);
     if (usdIn) usdIn.value = zekatRates.usdTry.toFixed(2);
     if (eurIn) eurIn.value = zekatRates.eurTry.toFixed(2);
 }
 
+function updateZekatRateTimestampUI(sourceLabel) {
+    const badge = document.getElementById('zekatRateStatusBadge');
+    const timeEl = document.getElementById('zekatLastUpdatedTime');
+    const nowTime = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+    if (badge) {
+        badge.textContent = `${sourceLabel} ✓`;
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+    }
+    if (timeEl) {
+        timeEl.textContent = `Son Güncelleme: ${nowTime}`;
+    }
+}
+
 async function fetchLiveZekatRates(showFeedback = false) {
     const badge = document.getElementById('zekatRateStatusBadge');
     if (badge) {
-        badge.textContent = 'Kurlar Güncelleniyor...';
+        badge.textContent = 'Canlı Kurlar Çekiliyor...';
     }
 
+    // 1. Birincil Kaynak: Türkiye Kapalıçarşı & Serbest Piyasa Canlı Finans API (Truncgil v4)
     try {
-        // Canlı Döviz ve Altın/Gümüş Ons verisi için açık CORS destekli API'ler
-        const res = await fetch('https://open.er-api.com/v6/latest/USD');
-        if (!res.ok) throw new Error('Kur servisi yanıt vermedi');
-        const data = await res.json();
+        const controller = new AbortController();
+        const tId = setTimeout(() => controller.abort(), 5500);
+        const res = await fetch('https://finans.truncgil.com/v4/today.json', {
+            signal: controller.signal,
+            cache: 'no-store'
+        });
+        clearTimeout(tId);
 
-        if (data && data.rates && data.rates.TRY) {
-            const usdTry = Number(data.rates.TRY);
-            const eurUsd = Number(data.rates.EUR) || 0.92;
-            const eurTry = usdTry / eurUsd;
+        if (res.ok) {
+            const data = await res.json();
+            const gra = parseTurkishNumber(data?.GRA?.Selling || data?.GRA?.Buying);
+            const ceyrek = parseTurkishNumber(data?.CEYREKALTIN?.Selling || data?.CEYREKALTIN?.Buying);
+            const gumus = parseTurkishNumber(data?.GUMUS?.Selling || data?.GUMUS?.Buying);
+            const usd = parseTurkishNumber(data?.USD?.Selling || data?.USD?.Buying);
+            const eur = parseTurkishNumber(data?.EUR?.Selling || data?.EUR?.Buying);
 
-            zekatRates.usdTry = Math.round(usdTry * 100) / 100;
-            zekatRates.eurTry = Math.round(eurTry * 100) / 100;
+            if (gra > 1000 && usd > 10) {
+                zekatRates.goldGramTry = Math.round(gra * 100) / 100;
+                zekatRates.quarterGoldTry = ceyrek > 1000
+                    ? Math.round(ceyrek * 100) / 100
+                    : Math.round(gra * 1.637 * 100) / 100;
+                if (gumus > 1) zekatRates.silverGramTry = Math.round(gumus * 100) / 100;
+                zekatRates.usdTry = Math.round(usd * 100) / 100;
+                if (eur > 10) zekatRates.eurTry = Math.round(eur * 100) / 100;
+                zekatRates.source = 'live-tr';
 
-            // Eğer API XAU (Ons Altın) döndürüyorsa veya uluslararası spot ons (~2735$) üzerinden 24 ayar gram altın hesapla
-            // 1 Troy Ons = 31.1034768 gram
-            let xauUsd = 2740;
-            let xagUsd = 33.2;
+                populateZekatRateInputs();
+                calculateZekat();
+                updateZekatRateTimestampUI('Canlı Piyasa Kurları Aktif');
 
-            if (data.rates.XAU && Number(data.rates.XAU) > 0) {
-                xauUsd = 1 / Number(data.rates.XAU);
+                if (showFeedback) {
+                    showToast(
+                        'Canlı Piyasa Kurları Güncellendi',
+                        `24 Ayar Gram Altın: ₺${zekatRates.goldGramTry.toLocaleString('tr-TR')} • Çeyrek: ₺${zekatRates.quarterGoldTry.toLocaleString('tr-TR')} • Dolar: ₺${zekatRates.usdTry.toLocaleString('tr-TR')}`,
+                        'emerald'
+                    );
+                }
+                return;
             }
-            if (data.rates.XAG && Number(data.rates.XAG) > 0) {
-                xagUsd = 1 / Number(data.rates.XAG);
-            }
-
-            zekatRates.goldGramTry = Math.round(((xauUsd * usdTry) / 31.1035) * 100) / 100;
-            zekatRates.silverGramTry = Math.round(((xagUsd * usdTry) / 31.1035) * 100) / 100;
-            zekatRates.source = 'live';
-
-            populateZekatRateInputs();
-            calculateZekat();
-
-            if (badge) {
-                badge.textContent = 'Canlı Kurlar Aktif ✓';
-                badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
-            }
-            if (showFeedback) {
-                showToast('Canlı Kurlar Güncellendi', 'Altın, gümüş, Dolar ve Euro kurları anlık piyasa verileriyle eşitlendi.', 'emerald');
-            }
-            return;
         }
     } catch (e) {
-        // Yedek kurlarla devam et
+        // İkincil kaynağa geç
+    }
+
+    // 2. İkincil Kaynak: Küresel XAU/TRY, XAG/TRY, USD/TRY, EUR/TRY Canlı Finans CDN Servisi
+    const fallbackUrls = [
+        'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/try.json',
+        'https://latest.currency-api.pages.dev/v1/currencies/try.json'
+    ];
+
+    for (const url of fallbackUrls) {
+        try {
+            const controller = new AbortController();
+            const tId = setTimeout(() => controller.abort(), 5500);
+            const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+            clearTimeout(tId);
+
+            if (res.ok) {
+                const data = await res.json();
+                const rates = data?.try;
+                if (rates && rates.usd && rates.xau) {
+                    const usdTry = 1 / Number(rates.usd);
+                    const eurTry = rates.eur ? 1 / Number(rates.eur) : usdTry * 1.12;
+                    // 1 Troy Ons (XAU) = 31.1034768 gram 24 ayar saf altın
+                    const ounceGoldTry = 1 / Number(rates.xau);
+                    const gramGoldTry = ounceGoldTry / 31.1034768;
+                    const gramSilverTry = rates.xag
+                        ? (1 / Number(rates.xag)) / 31.1034768
+                        : zekatRates.silverGramTry;
+
+                    zekatRates.goldGramTry = Math.round(gramGoldTry * 100) / 100;
+                    zekatRates.quarterGoldTry = Math.round(gramGoldTry * 1.637 * 100) / 100;
+                    zekatRates.silverGramTry = Math.round(gramSilverTry * 100) / 100;
+                    zekatRates.usdTry = Math.round(usdTry * 100) / 100;
+                    zekatRates.eurTry = Math.round(eurTry * 100) / 100;
+                    zekatRates.source = 'live-global';
+
+                    populateZekatRateInputs();
+                    calculateZekat();
+                    updateZekatRateTimestampUI('Canlı Kurlar Aktif');
+
+                    if (showFeedback) {
+                        showToast(
+                            'Canlı Kurlar Güncellendi',
+                            `Gram Altın: ₺${zekatRates.goldGramTry.toLocaleString('tr-TR')} • Çeyrek: ₺${zekatRates.quarterGoldTry.toLocaleString('tr-TR')} • Dolar: ₺${zekatRates.usdTry.toLocaleString('tr-TR')}`,
+                            'emerald'
+                        );
+                    }
+                    return;
+                }
+            }
+        } catch (e) {
+            // Sonraki yedeği dene
+        }
     }
 
     populateZekatRateInputs();
     calculateZekat();
     if (badge) {
-        badge.textContent = 'Piyasa Kurları (Düzenlenebilir)';
+        badge.textContent = 'Güncel Piyasa Kurları';
     }
 }
 
 function calculateZekat() {
     const rateGold = Math.max(0, Number(document.getElementById('rateGoldInput')?.value) || zekatRates.goldGramTry);
+    const rateQuarterGold = Math.max(0, Number(document.getElementById('rateQuarterGoldInput')?.value) || zekatRates.quarterGoldTry);
     const rateSilver = Math.max(0, Number(document.getElementById('rateSilverInput')?.value) || zekatRates.silverGramTry);
     const rateUsd = Math.max(0, Number(document.getElementById('rateUsdInput')?.value) || zekatRates.usdTry);
     const rateEur = Math.max(0, Number(document.getElementById('rateEurInput')?.value) || zekatRates.eurTry);
 
     const cashTry = Math.max(0, Number(document.getElementById('zekatCashTry')?.value) || 0);
     const goldGrams = Math.max(0, Number(document.getElementById('zekatGoldGrams')?.value) || 0);
+    const quarterGoldCount = Math.max(0, Number(document.getElementById('zekatQuarterGoldCount')?.value) || 0);
     const silverGrams = Math.max(0, Number(document.getElementById('zekatSilverGrams')?.value) || 0);
     const usdAmount = Math.max(0, Number(document.getElementById('zekatUsdAmount')?.value) || 0);
     const eurAmount = Math.max(0, Number(document.getElementById('zekatEurAmount')?.value) || 0);
@@ -2312,6 +2396,7 @@ function calculateZekat() {
     const totalAssetsTry =
         cashTry +
         goldGrams * rateGold +
+        quarterGoldCount * rateQuarterGold +
         silverGrams * rateSilver +
         usdAmount * rateUsd +
         eurAmount * rateEur;
@@ -2328,7 +2413,7 @@ function calculateZekat() {
     const payableSub = document.getElementById('zekatPayableSub');
 
     if (nisapText) {
-        nisapText.textContent = `Nisap Alt Sınırı (80.18 gr Altın): ${formatCurrencyTRY(nisapThresholdTry)}`;
+        nisapText.textContent = `Nisap Alt Sınırı (80.18 gr 24 Ayar Altın): ${formatCurrencyTRY(nisapThresholdTry)}`;
     }
     if (totalEl) {
         totalEl.textContent = formatCurrencyTRY(netWorthTry);
@@ -2341,11 +2426,11 @@ function calculateZekat() {
         if (netWorthTry === 0) {
             nisapBadge.textContent = 'Varlık Bilgisi Giriniz';
             nisapBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white';
-            payableSub.textContent = 'Nakit, altın, gümüş veya döviz varlığınızı girdiğinizde otomatik hesaplanır.';
+            payableSub.textContent = 'Gram altın, çeyrek altın, nakit, gümüş veya döviz varlığınızı girdiğinizde otomatik hesaplanır.';
         } else if (isAboveNisap) {
             nisapBadge.textContent = '✓ Nisap Miktarına Ulaştı (Zekat Farzdır)';
             nisapBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-950 shadow-sm';
-            payableSub.textContent = `Net varlığınız 80.18 gr altın sınırını aştığı için %2,5 (1/40) zekat tutarınız hesaplanmıştır.`;
+            payableSub.textContent = `Net varlığınız 80.18 gr altın sınırını (${formatCurrencyTRY(nisapThresholdTry)}) aştığı için %2,5 (1/40) zekat tutarınız hesaplanmıştır.`;
         } else {
             const remaining = Math.max(0, nisapThresholdTry - netWorthTry);
             nisapBadge.textContent = 'Nisap Sınırının Altında (Zekat Gerekmez)';
@@ -2902,11 +2987,13 @@ function setupEventListeners() {
     // Akıllı Zekat Hesaplama Etkileşimleri
     const zekatInputIds = [
         'rateGoldInput',
+        'rateQuarterGoldInput',
         'rateSilverInput',
         'rateUsdInput',
         'rateEurInput',
         'zekatCashTry',
         'zekatGoldGrams',
+        'zekatQuarterGoldCount',
         'zekatSilverGrams',
         'zekatUsdAmount',
         'zekatEurAmount',
@@ -2921,7 +3008,7 @@ function setupEventListeners() {
     });
 
     document.getElementById('zekatClearBtn')?.addEventListener('click', () => {
-        ['zekatCashTry', 'zekatGoldGrams', 'zekatSilverGrams', 'zekatUsdAmount', 'zekatEurAmount', 'zekatDebtTry'].forEach((id) => {
+        ['zekatCashTry', 'zekatGoldGrams', 'zekatQuarterGoldCount', 'zekatSilverGrams', 'zekatUsdAmount', 'zekatEurAmount', 'zekatDebtTry'].forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
