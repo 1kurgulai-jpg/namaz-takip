@@ -23,7 +23,8 @@
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+                        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+                        arabic: ['Amiri', 'Traditional Arabic', 'serif']
                     },
                     colors: {
                         emerald: {
@@ -47,9 +48,11 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti (Quiz 5/5 Kutlaması İçin) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
@@ -317,26 +320,39 @@
             </div>
         </section>
 
-        <!-- Ana Sekmeler: 5 Vakit Namaz Listesi | Kaza Çetelesi | Kıble Pusulası -->
-        <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="inline-flex flex-wrap p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
-                <button id="tabDailyBtn" type="button"
-                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-1.5">
-                    <i data-lucide="list-checks" class="w-4 h-4 text-emerald-500"></i>
-                    <span>5 Vakit Namaz</span>
-                </button>
-                <button id="tabKazaBtn" type="button"
-                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
-                    <i data-lucide="history" class="w-4 h-4"></i>
-                    <span>Kaza Çetelesi</span>
-                    <span id="totalKazaBadge" class="px-1.5 py-0.2 text-[11px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">0</span>
-                </button>
-                <button id="tabQiblaBtn" type="button"
-                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
-                    <i data-lucide="compass" class="w-4 h-4 text-amber-500"></i>
-                    <span>Kıble Pusulası</span>
-                </button>
-            </div>
+        <!-- Ana Sekmeler: 5 Vakit | Kaza | Kıble | Sure & Dualar | Zekat Hesapla | Dini Quiz -->
+        <div class="bg-slate-200/75 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
+            <button id="tabDailyBtn" type="button"
+                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-1.5">
+                <i data-lucide="list-checks" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                <span class="truncate">5 Vakit</span>
+            </button>
+            <button id="tabKazaBtn" type="button"
+                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="history" class="w-4 h-4 shrink-0"></i>
+                <span class="truncate">Kaza</span>
+                <span id="totalKazaBadge" class="px-1.5 py-0.2 text-[10px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">0</span>
+            </button>
+            <button id="tabQiblaBtn" type="button"
+                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="compass" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                <span class="truncate">Kıble</span>
+            </button>
+            <button id="tabSurahsBtn" type="button"
+                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="book-open" class="w-4 h-4 text-teal-500 shrink-0"></i>
+                <span class="truncate">Sure & Dua</span>
+            </button>
+            <button id="tabZekatBtn" type="button"
+                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="coins" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                <span class="truncate">Zekat</span>
+            </button>
+            <button id="tabQuizBtn" type="button"
+                class="justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                <span class="truncate">Dini Quiz</span>
+            </button>
         </div>
 
         <!-- SEKME 1: 5 Vakit Namaz Listesi -->
@@ -416,47 +432,36 @@
 
                 <!-- Pusula Kadranı -->
                 <div class="py-8 flex flex-col items-center justify-center">
-                    <!-- Üst Hedef Ok İşareti (Telefonun Üst Yönü) -->
                     <div class="mb-3 flex flex-col items-center">
                         <div id="qiblaTopPointer" class="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[16px] border-b-emerald-500 transition-colors"></div>
                         <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-1">Cihaz Yönü</span>
                     </div>
 
-                    <!-- Dönen Pusula Çemberi -->
                     <div id="compassOuterRing" class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border-4 border-slate-200 dark:border-slate-800 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 shadow-inner flex items-center justify-center transition-all duration-300">
-                        
-                        <!-- Dönen İç Kadran (Kuzey, Doğu, Güney, Batı + Kıble İğnesi) -->
                         <div id="compassDial" class="relative w-full h-full rounded-full transition-transform duration-150 ease-out" style="transform: rotate(0deg);">
-                            <!-- Yön Harfleri -->
                             <span class="absolute top-3 left-1/2 -translate-x-1/2 font-extrabold text-sm text-rose-500">K (N)</span>
                             <span class="absolute bottom-3 left-1/2 -translate-x-1/2 font-bold text-xs text-slate-400">G (S)</span>
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">D (E)</span>
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">B (W)</span>
 
-                            <!-- Derece Çizgileri -->
                             <div class="absolute inset-6 rounded-full border border-dashed border-slate-300 dark:border-slate-800"></div>
 
-                            <!-- Kıble (Kâbe) Yönü İbresi (Kuzeye Göre Kıble Açısına Döndürülür) -->
                             <div id="qiblaNeedleContainer" class="absolute inset-0 flex items-center justify-center" style="transform: rotate(151deg);">
                                 <div class="w-1.5 h-full flex flex-col items-center justify-start pt-7">
-                                    <!-- Kâbe İkonu / Başlığı -->
                                     <div class="w-9 h-9 -mt-2 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center font-bold text-base border-2 border-white dark:border-slate-900">
                                         🕋
                                     </div>
-                                    <!-- İbre Çubuğu -->
                                     <div class="w-1.5 h-20 bg-gradient-to-b from-amber-500 to-emerald-500 rounded-full"></div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Merkez Noktası -->
                         <div class="absolute w-14 h-14 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center z-10">
                             <span id="compassCenterDeg" class="font-mono font-extrabold text-xs text-slate-800 dark:text-slate-100">0°</span>
                             <span class="text-[9px] text-slate-400 uppercase">Pusula</span>
                         </div>
                     </div>
 
-                    <!-- Açı Bilgileri Özeti -->
                     <div class="grid grid-cols-3 gap-3 w-full max-w-md mt-6">
                         <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
                             <p class="text-[11px] text-slate-400 font-medium">Kıble Açısı</p>
@@ -472,7 +477,6 @@
                         </div>
                     </div>
 
-                    <!-- Masaüstü / Manuel Pusula Simülasyon Kaydırıcısı -->
                     <div class="w-full max-w-md mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                         <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
                             <span id="compassSensorStatus">Pusula sensörü olmayan cihazlar için manuel yön testi:</span>
@@ -480,6 +484,284 @@
                         </div>
                         <input id="manualCompassSlider" type="range" min="0" max="359" value="0"
                             class="w-full accent-emerald-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEKME 4: Namaz Sureleri ve Duaları -->
+        <section id="surahsSection" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="book-open-check" class="w-5 h-5 text-emerald-500"></i>
+                            Namaz Sureleri ve Duaları Rehberi
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Üzerine tıklayarak Arapça yazılışını, Türkçe okunuşunu ve mealini görüntüleyin.
+                        </p>
+                    </div>
+
+                    <!-- Kategori Filtresi -->
+                    <div class="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold self-start sm:self-auto">
+                        <button type="button" data-surah-filter="all" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm transition">
+                            Tümü
+                        </button>
+                        <button type="button" data-surah-filter="sure" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
+                            Sureler
+                        </button>
+                        <button type="button" data-surah-filter="dua" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
+                            Dualar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Arama Kutusu -->
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                    <input id="surahSearchInput" type="text" placeholder="Sure veya dua ara (Örn: Fatiha, İhlas, Tahiyyat, Sübhaneke)..."
+                        class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                </div>
+
+                <!-- Sure ve Dua Kartları Listesi -->
+                <div id="surahListContainer" class="space-y-2.5">
+                    <!-- JS ile doldurulacak -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SEKME 5: Akıllı Zekat Hesaplama (Canlı Kurlar) -->
+        <section id="zekatSection" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+                <!-- Üst Başlık ve Canlı Kur Durumu -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Akıllı Zekat Hesaplama</h3>
+                            <span id="zekatRateStatusBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                Canlı Piyasa Kurları
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Diyanet ölçülerine göre (80.18 gr altın nisabı üzerinden %2.5 / kırkta bir) otomatik hesaplanır.
+                        </p>
+                    </div>
+
+                    <button id="refreshRatesBtn" type="button"
+                        class="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-500"></i>
+                        <span>Kurları Güncelle</span>
+                    </button>
+                </div>
+
+                <!-- Canlı Kur Özeti (İsteğe Bağlı Düzenlenebilir) -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Güncel Birim Kurlar (₺) — İsterseniz Düzenleyebilirsiniz</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
+                            <label for="rateGoldInput" class="block text-[10px] font-semibold text-amber-600 dark:text-amber-400">24 Ayar Gram Altın (₺)</label>
+                            <input id="rateGoldInput" type="number" step="0.01" min="0"
+                                class="w-full mt-1 bg-transparent font-mono font-bold text-sm text-slate-900 dark:text-white focus:outline-none" />
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
+                            <label for="rateSilverInput" class="block text-[10px] font-semibold text-slate-500 dark:text-slate-400">Gram Gümüş (₺)</label>
+                            <input id="rateSilverInput" type="number" step="0.01" min="0"
+                                class="w-full mt-1 bg-transparent font-mono font-bold text-sm text-slate-900 dark:text-white focus:outline-none" />
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
+                            <label for="rateUsdInput" class="block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">1 ABD Doları ($ → ₺)</label>
+                            <input id="rateUsdInput" type="number" step="0.01" min="0"
+                                class="w-full mt-1 bg-transparent font-mono font-bold text-sm text-slate-900 dark:text-white focus:outline-none" />
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
+                            <label for="rateEurInput" class="block text-[10px] font-semibold text-teal-600 dark:text-teal-400">1 Euro (€ → ₺)</label>
+                            <input id="rateEurInput" type="number" step="0.01" min="0"
+                                class="w-full mt-1 bg-transparent font-mono font-bold text-sm text-slate-900 dark:text-white focus:outline-none" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Varlık Giriş Formu -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                    <div>
+                        <label for="zekatCashTry" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Nakit Para / Banka / Alacaklar (₺ TL)
+                        </label>
+                        <div class="relative">
+                            <input id="zekatCashTry" type="number" min="0" step="any" placeholder="0"
+                                class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 font-mono text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₺</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="zekatGoldGrams" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Altın Miktarı (Gram - 24 Ayar Karşılığı)
+                        </label>
+                        <div class="relative">
+                            <input id="zekatGoldGrams" type="number" min="0" step="any" placeholder="0"
+                                class="w-full pl-3.5 pr-12 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 font-mono text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-500">gr</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="zekatSilverGrams" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Gümüş Miktarı (Gram)
+                        </label>
+                        <div class="relative">
+                            <input id="zekatSilverGrams" type="number" min="0" step="any" placeholder="0"
+                                class="w-full pl-3.5 pr-12 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 font-mono text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">gr</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="zekatUsdAmount" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Döviz — ABD Doları ($)
+                        </label>
+                        <div class="relative">
+                            <input id="zekatUsdAmount" type="number" min="0" step="any" placeholder="0"
+                                class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 font-mono text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">$</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="zekatEurAmount" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Döviz — Euro (€)
+                        </label>
+                        <div class="relative">
+                            <input id="zekatEurAmount" type="number" min="0" step="any" placeholder="0"
+                                class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 font-mono text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-teal-500">€</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="zekatDebtTry" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Düşülecek Kısa Vadeli Borçlar (₺ TL)
+                        </label>
+                        <div class="relative">
+                            <input id="zekatDebtTry" type="number" min="0" step="any" placeholder="0"
+                                class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 font-mono text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500" />
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-500">-₺</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zekat Sonuç & Nisap Karşılaştırma Kartı -->
+                <div id="zekatResultBox" class="rounded-2xl p-5 bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 text-white shadow-lg space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/15">
+                        <div>
+                            <span id="zekatNisapStatusBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
+                                Varlık Giriniz
+                            </span>
+                            <p id="zekatNisapThresholdText" class="text-xs text-emerald-100 mt-1">
+                                Nisap Alt Sınırı (80.18 gr Altın): ₺0,00
+                            </p>
+                        </div>
+                        <button id="zekatClearBtn" type="button"
+                            class="self-start sm:self-auto px-3 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-xs font-semibold text-emerald-100 transition">
+                            Formu Temizle
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                        <div>
+                            <p class="text-xs text-emerald-100 font-medium">Toplam Net Varlığınız</p>
+                            <p id="zekatTotalNetWorth" class="font-mono text-2xl sm:text-3xl font-extrabold mt-0.5">₺0,00</p>
+                        </div>
+                        <div class="bg-black/20 rounded-xl p-4 border border-white/10">
+                            <p class="text-xs text-amber-200 font-semibold uppercase tracking-wide">Ödenmesi Gereken Net Zekat (%2.5)</p>
+                            <p id="zekatPayableAmount" class="font-mono text-2xl sm:text-3xl font-extrabold text-white mt-1">₺0,00</p>
+                            <p id="zekatPayableSub" class="text-[11px] text-emerald-100 mt-1">
+                                Nisap sınırını aştığında 40'ta 1 (%2,5) oranında hesaplanır.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEKME 6: Günlük Dini Bilgi Quizi -->
+        <section id="quizSection" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+                <!-- Üst Başlık -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Günlük Dini Bilgi Quizi</h3>
+                            <span id="quizProgressBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                Soru 1 / 5
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            5 sorunun tamamını doğru yanıtlayarak günün yıldızlı başarı rozetini kazanın!
+                        </p>
+                    </div>
+
+                    <button id="restartQuizBtn" type="button"
+                        class="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5">
+                        <i data-lucide="shuffle" class="w-3.5 h-3.5 text-emerald-500"></i>
+                        <span>Yeni 5 Soru Getir</span>
+                    </button>
+                </div>
+
+                <!-- Soru Alanı -->
+                <div id="quizQuestionContainer" class="space-y-4">
+                    <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800">
+                        <span id="quizCategoryTag" class="inline-block text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1.5">
+                            Fıkıh & İbadet
+                        </span>
+                        <h4 id="quizQuestionText" class="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-snug">
+                            Soru yükleniyor...
+                        </h4>
+                    </div>
+
+                    <!-- Şıklar -->
+                    <div id="quizOptionsList" class="grid grid-cols-1 gap-2.5">
+                        <!-- JS ile 4 şık buraya oluşturulur -->
+                    </div>
+
+                    <!-- Açıklama & Sonraki Soru Satırı -->
+                    <div id="quizFeedbackBox" class="hidden p-4 rounded-xl border text-xs sm:text-sm space-y-2">
+                        <p id="quizFeedbackText" class="font-medium"></p>
+                        <div class="flex justify-end">
+                            <button id="quizNextBtn" type="button"
+                                class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+                                <span id="quizNextBtnLabel">Sonraki Soru</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quiz Sonuç & Kutlama Ekranı -->
+                <div id="quizResultContainer" class="hidden py-6 text-center space-y-4">
+                    <div id="quizResultBadgeIcon" class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-amber-400 via-emerald-500 to-teal-600 text-white flex items-center justify-center text-4xl shadow-xl shadow-emerald-500/20">
+                        🌟
+                    </div>
+                    <div class="space-y-1.5">
+                        <span id="quizWinnerPill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                            🏆 Günün Âlimi Rozeti Kazanıldı!
+                        </span>
+                        <h4 id="quizResultTitle" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+                            Tebrikler! Bugünün sınavını başarıyla geçtin 🌟
+                        </h4>
+                        <p id="quizResultSubtitle" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                            5 sorunun 5'ini de doğru cevapladınız.
+                        </p>
+                    </div>
+                    <div class="pt-2">
+                        <button id="quizPlayAgainBtn" type="button"
+                            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm transition inline-flex items-center gap-2 shadow-md shadow-emerald-600/20">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            <span>Yeni Sorularla Tekrar Çöz</span>
+                        </button>
                     </div>
                 </div>
             </div>

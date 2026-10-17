@@ -1916,7 +1916,738 @@ async function triggerPwaInstall() {
     }
 }
 
-// Sekme Değiştirici (5 Vakit | Kaza | Kıble Pusulası)
+// ============================================================================
+// 6. NAMAZ SURELERİ VE DUALARI REHBERİ
+// ============================================================================
+
+const SURAHS_AND_DUAS = [
+    {
+        id: 'subhaneke',
+        type: 'dua',
+        title: 'Sübhaneke Duası',
+        badge: 'Namaz Duası • İftitah',
+        info: 'Her namazın ilk rekatında iftitah tekbirinden sonra, ikindi ve yatsı namazlarının ilk sünnetlerinde 3. rekat başında okunur.',
+        arabic: 'سُبْحَانَكَ اللّٰهُمَّ وَبِحَمْدِكَ وَتَبَارَكَ اسْمُكَ وَتَعَالٰى جَدُّكَ وَلَا اِلٰهَ غَيْرُكَ',
+        pronunciation: 'Sübhânekellâhümme ve bi hamdik ve tebârekesmük ve teâlâ ceddük (ve celle senâük*) ve lâ ilâhe ğayrük.',
+        meaning: 'Allah’ım! Sen eksik sıfatlardan pak ve uzaksın. Seni daima böyle tenzih eder ve överim. Senin adın mübarektir. Varlığın her şeyden üstündür. Senden başka ilah yoktur. (*Ve celle senâük ifadesi yalnızca cenaze namazında eklenir.)'
+    },
+    {
+        id: 'fatiha',
+        type: 'sure',
+        title: 'Fâtiha Suresi',
+        badge: 'Mushaf 1. Sure • 7 Ayet',
+        info: 'Kur’an-ı Kerim’in ilk suresidir. Bütün namazların her rekatında kıyamda okunması vaciptir.',
+        arabic: 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّح۪يمِ ﴿١﴾ اَلْحَمْدُ لِلّٰهِ رَبِّ الْعَالَم۪ينَۙ ﴿٢﴾ اَلرَّحْمٰنِ الرَّح۪يمِۙ ﴿٣﴾ مَالِكِ يَوْمِ الدّ۪ينِۜ ﴿٤﴾ اِيَّاكَ نَعْبُدُ وَاِيَّاكَ نَسْتَع۪ينُۜ ﴿٥﴾ اِهْدِنَا الصِّرَاطَ الْمُسْتَق۪يمَۙ ﴿٦﴾ صِرَاطَ الَّذ۪ينَ اَنْعَمْتَ عَلَيْهِمْۙ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّآلّ۪ينَ ﴿٧﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Elhamdü lillâhi rabbil âlemîn. Errahmânirrahîm. Mâliki yevmiddîn. İyyâke na’büdü ve iyyâke nestaîn. İhdinas-sırâtal müstakîm. Sırâtallezîne en’amte aleyhim ğayril mağdûbi aleyhim ve led-dâllîn. (Âmin)',
+        meaning: 'Rahmân ve Rahîm olan Allah’ın adıyla. Hamd, âlemlerin Rabbi, Rahmân, Rahîm, hesap ve ceza gününün maliki olan Allah’a mahsustur. (Allah’ım!) Yalnız sana ibadet ederiz ve yalnız senden yardım dileriz. Bizi doğru yola, kendilerine nimet verdiklerinin yoluna ilet; gazaba uğrayanlarınkine ve sapıklarınkine değil.'
+    },
+    {
+        id: 'ayetel-kursi',
+        type: 'sure',
+        title: 'Âyetel Kürsî (Bakara 255)',
+        badge: 'Bakara Suresi • 255. Ayet',
+        info: 'Farz namazların ardından tesbihat öncesi okunan, Tevhid ilmini en veciz şekilde anlatan ayet-i kerimedir.',
+        arabic: 'اَللّٰهُ لَٓا اِلٰهَ اِلَّا هُوَ الْحَيُّ الْقَيُّومُۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌۜ لَهُ مَا فِي السَّمٰوَاتِ وَمَا فِي الْاَرْضِۜ مَنْ ذَا الَّذ۪ي يَشْفَعُ عِنْدَهُٓ اِلَّا بِاِذْنِه۪ۜ يَعْلَمُ مَا بَيْنَ اَيْد۪يهِمْ وَمَا خَلْفَهُمْۚ وَلَا يُح۪يطُونَ بِشَيْءٍ مِنْ عِلْمِه۪ٓ اِلَّا بِمَا شَٓاءَۚ وَسِعَ كُرْسِيُّهُ السَّمٰوَاتِ وَالْاَرْضَۚ وَلَا يَؤُ۫دُهُ حِفْظُهُمَاۚ وَهُوَ الْعَلِيُّ الْعَظ۪يمُ',
+        pronunciation: 'Allâhü lâ ilâhe illâ hüvel hayyül kayyûm, lâ te’huzühû sinetün ve lâ nevm, lehû mâ fis-semâvâti ve mâ fil ard, men zellezî yeşfeu indehû illâ bi-iznih, ya’lemü mâ beyne eydîhim ve mâ halfehüm, ve lâ yühîtûne bi-şey’in min ilmihî illâ bimâ şâe, vesia kürsiyyühüs-semâvâti vel ard, ve lâ yeûdühû hıfzuhümâ ve hüvel aliyyül azîm.',
+        meaning: 'Allah, kendisinden başka hiçbir ilâh olmayandır. Diridir, kayyûmdur (her şeyi ayakta tutandır). O’nu ne bir uyuklama tutabilir, ne de bir uyku. Göklerdeki her şey, yerdeki her şey O’nundur. İzni olmaksızın O’nun katında şefaatte bulunacak kimdir? O, kulların önlerindekileri ve arkalarındakileri (yaptıklarını ve yapacaklarını) bilir. Onlar O’nun ilminden, kendisinin dilediği kadarından başka bir şey kavrayamazlar. O’nun kürsüsü bütün gökleri ve yeri kaplayıp kuşatmıştır. Gökleri ve yeri koruyup gözetmek O’na güç gelmez. O, yücedir, büyüktür.'
+    },
+    {
+        id: 'ihlas',
+        type: 'sure',
+        title: 'İhlâs Suresi',
+        badge: 'Mushaf 112. Sure • 4 Ayet',
+        info: 'Allah’ın birliğini (Tevhid) en saf haliyle anlatan ve Kur’an’ın üçte birine denk kabul edilen suredir.',
+        arabic: 'قُلْ هُوَ اللّٰهُ اَحَدٌۚ ﴿١﴾ اَللّٰهُ الصَّمَدُۚ ﴿٢﴾ لَمْ يَلِدْ وَلَمْ يُولَدْۙ ﴿٣﴾ وَلَمْ يَكُنْ لَهُ كُفُوًا اَحَدٌ ﴿٤﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Kul hüvellâhü ehad. Allâhüs-samed. Lem yelid ve lem yûled. Ve lem yekün lehû küfüven ehad.',
+        meaning: 'De ki: O, Allah’tır, bir tektir. Allah Samed’dir (Her şey O’na muhtaçtır; O, hiçbir şeye muhtaç değildir). O’ndan çocuk olmamıştır (Kimsenin babası değildir). Kendisi de doğmamıştır (Kimsenin çocuğu değildir). Hiçbir şey O’na denk ve benzer değildir.'
+    },
+    {
+        id: 'felak',
+        type: 'sure',
+        title: 'Felak Suresi',
+        badge: 'Mushaf 113. Sure • 5 Ayet',
+        info: 'Nâs suresi ile birlikte "Muavvizeteyn" (iki koruyucu sure) olarak anılır.',
+        arabic: 'قُلْ اَعُوذُ بِرَبِّ الْفَلَقِۙ ﴿١﴾ مِنْ شَرِّ مَا خَلَقَۙ ﴿٢﴾ وَمِنْ شَرِّ غَاسِقٍ اِذَا وَقَبَۙ ﴿٣﴾ وَمِنْ شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِۙ ﴿٤﴾ وَمِنْ شَرِّ حَاسِدٍ اِذَا حَسَدَ ﴿٥﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Kul eûzü birabbil-felak. Min şerri mâ halak. Ve min şerri ğâsikın izâ vekab. Ve min şerrin-neffâsâti fil-ukad. Ve min şerri hâsidin izâ hased.',
+        meaning: 'De ki: Yarattığı şeylerin kötülüğünden, karanlığı çöktüğü zaman gecenin kötülüğünden, düğümlere üfleyenlerin kötülüğünden ve haset ettiği zaman hasetçinin kötülüğünden, sabah aydınlığının Rabbine sığınırım.'
+    },
+    {
+        id: 'nas',
+        type: 'sure',
+        title: 'Nâs Suresi',
+        badge: 'Mushaf 114. Sure • 6 Ayet',
+        info: 'Kur’an-ı Kerim’in son suresidir. Vesveseden ve şerlerden Allah’a sığınmayı öğretir.',
+        arabic: 'قُلْ اَعُوذُ بِرَبِّ النَّاسِۙ ﴿١﴾ مَلِكِ النَّاسِۙ ﴿٢﴾ اِلٰهِ النَّاسِۙ ﴿٣﴾ مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِۙ ﴿٤﴾ اَلَّذ۪ي يُوَسْوِسُ ف۪ي صُدُورِ النَّاسِۙ ﴿٥﴾ مِنَ الْجِنَّةِ وَالنَّاسِ ﴿٦﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Kul eûzü birabbin-nâs. Melikin-nâs. İlâhin-nâs. Min şerril-vesvâsil-hannâs. Ellezî yüvesvisü fî sudûrin-nâs. Minel-cinneti ven-nâs.',
+        meaning: 'De ki: Cinlerden ve insanlardan; insanların kalplerine vesvese veren sinsi vesvesecinin kötülüğünden, insanların Rabbine, insanların Melik’ine, insanların İlâh’ına sığınırım.'
+    },
+    {
+        id: 'kevser',
+        type: 'sure',
+        title: 'Kevser Suresi',
+        badge: 'Mushaf 108. Sure • 3 Ayet',
+        info: 'Kur’an-ı Kerim’in en kısa suresidir. Namazlarda zamm-ı sure olarak sıkça okunur.',
+        arabic: 'اِنَّآ اَعْطَيْنَاكَ الْكَوْثَرَۜ ﴿١﴾ فَصَلِّ لِرَبِّكَ وَانْحَرْۜ ﴿٢﴾ اِنَّ شَانِئَكَ هُوَ الْاَبْتَرُ ﴿٣﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. İnnâ a’taynâkel-kevser. Fesalli lirabbike venhar. İnne şânieke hüvel-ebter.',
+        meaning: 'Şüphesiz biz sana Kevser’i verdik. O Halde, Rabbin için namaz kıl, kurban kes. Doğrusu sana buğzeden, soyu kesik olanın ta kendisidir.'
+    },
+    {
+        id: 'fil',
+        type: 'sure',
+        title: 'Fîl Suresi',
+        badge: 'Mushaf 105. Sure • 5 Ayet',
+        info: 'Kâbe’yi yıkmaya gelen Ebrehe ordusunun helak edilişini anlatır.',
+        arabic: 'اَلَمْ تَرَ كَيْفَ فَعَلَ رَبُّكَ بِاَصْحَابِ الْف۪يلِۜ ﴿١﴾ اَلَمْ يَجْعَلْ كَيْدَهُمْ ف۪ي تَضْل۪يلٍۙ ﴿٢﴾ وَاَرْسَلَ عَلَيْهِمْ طَيْرًا اَبَاب۪يلَۙ ﴿٣﴾ تَرْم۪يهِمْ بِحِجَارَةٍ مِنْ سِجّ۪يلٍۙ ﴿٤﴾ فَجَعَلَهُمْ كَعَصْفٍ مَأْكُولٍ ﴿٥﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Elem tera keyfe feale rabbüke bi-ashâbil-fîl. Elem yec’al keydehüm fî tadlîl. Ve ersele aleyhim tayran ebâbîl. Termîhim bihicâratin min siccîl. Fecealehüm keasfin me’kûl.',
+        meaning: 'Rabbinin, fil sahiplerine ne yaptığını görmedin mi? Onların tuzaklarını boşa çıkarmadı mı? Üzerlerine balçıktan pişirilmiş taşlar atan sürü sürü kuşlar gönderdi. Nihayet onları yenilmiş ekin yaprağı haline getirdi.'
+    },
+    {
+        id: 'kureys',
+        type: 'sure',
+        title: 'Kureyş Suresi',
+        badge: 'Mushaf 106. Sure • 4 Ayet',
+        info: 'Kureyş kabilesine verilen güvenlik ve rızık nimetini hatırlatır.',
+        arabic: 'لِا۪يلَافِ قُرَيْشٍۙ ﴿١﴾ ا۪يلَافِهِمْ رِحْلَةَ الشِّتَآءِ وَالصَّيْفِۚ ﴿٢﴾ فَلْيَعْبُدُوا رَبَّ هٰذَا الْبَيْتِۙ ﴿٣﴾ اَلَّذ۪يٓ اَطْعَمَهُمْ مِنْ جُوعٍ وَاٰمَنَهُمْ مِنْ خَوْفٍ ﴿٤﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Li-îlâfi kureyş. Îlâfihim rıhleteş-şitâi ves-sayf. Felya’büdû rabbe hâzel-beyt. Ellezî et’amehüm min cû’in ve âmenehüm min havf.',
+        meaning: 'Kureyş’e kolaylaştırıldığı, evet, kış ve yaz seyahatleri onlara kolaylaştırıldığı için onlar, kendilerini açlıktan doyuran ve korkudan emin kılan bu Ev’in (Kâbe’nin) Rabbine kulluk etsinler.'
+    },
+    {
+        id: 'maun',
+        type: 'sure',
+        title: 'Mâûn Suresi',
+        badge: 'Mushaf 107. Sure • 7 Ayet',
+        info: 'Yetimi kollamayı, yardımlaşmayı ve namazda riyadan uzak durmayı öğütler.',
+        arabic: 'اَرَاَيْتَ الَّذ۪ي يُكَذِّبُ بِالدّ۪ينِۜ ﴿١﴾ فَذٰلِكَ الَّذ۪ي يَدُعُّ الْيَت۪يمَۙ ﴿٢﴾ وَلَا يَحُضُّ عَلٰى طَعَامِ الْمِسْك۪ينِۜ ﴿٣﴾ فَوَيْلٌ لِلْمُصَلّ۪ينَۙ ﴿٤﴾ اَلَّذ۪ينَ هُمْ عَنْ صَلَاتِهِمْ سَاهُونَۙ ﴿٥﴾ اَلَّذ۪ينَ هُمْ يُرَآؤُ۫نَۙ ﴿٦﴾ وَيَمْنَعُونَ الْمَاعُونَ ﴿٧﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Eraeytellezî yükezzibü biddîn. Fezâlikellezî yedu’ul-yetîm. Ve lâ yehuddu alâ taâmil-miskîn. Feveylün lil-musallîn. Ellezîne hüm an salâtihim sâhûn. Ellezîne hüm yürâûn. Ve yemneûnel-mâûn.',
+        meaning: 'Dini (hesap ve cezayı) yalanlayanı gördün mü? İşte o, yetimi itip kakan, yoksula yedirmeyi özendirmeyen kimsedir. Yazıklar olsun o namaz kılanlara ki, onlar namazlarını ciddiye almazlar. Onlar (namazlarıyla) gösteriş yaparlar. Ufacık bir yardıma bile engel olurlar.'
+    },
+    {
+        id: 'kafirun',
+        type: 'sure',
+        title: 'Kâfirûn Suresi',
+        badge: 'Mushaf 109. Sure • 6 Ayet',
+        info: 'İslam inancının şirk ile asla uzlaşmayacağını kesin bir dille ifade eder.',
+        arabic: 'قُلْ يَآ اَيُّهَا الْكَافِرُونَۙ ﴿١﴾ لَآ اَعْبُدُ مَا تَعْبُدُونَۙ ﴿٢﴾ وَلَآ اَنْتُمْ عَابِدُونَ مَآ اَعْبُدُۚ ﴿٣﴾ وَلَآ اَنَا۠ عَابِدٌ مَا عَبَدْتُمْۙ ﴿٤﴾ وَلَآ اَنْتُمْ عَابِدُونَ مَآ اَعْبُدُۜ ﴿٥﴾ لَكُمْ د۪ينُكُمْ وَلِيَ د۪ينِ ﴿٦﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. Kul yâ eyyühel-kâfirûn. Lâ a’büdü mâ ta’büdûn. Ve lâ entüm âbidûne mâ a’büd. Ve lâ ene âbidün mâ abedtüm. Ve lâ entüm âbidûne mâ a’büd. Leküm dînüküm veliye dîn.',
+        meaning: 'De ki: Ey kâfirler! Ben sizin kulluk ettiklerinize kulluk etmem. Siz de benim kulluk ettiğime kullukacak değilsiniz. Ben sizin kulluk ettiklerinize kulluk edecek değilim. Siz de benim kulluk ettiğime kulluk etmiyorsunuz. Sizin dininiz size, benim dinim banadır.'
+    },
+    {
+        id: 'nasr',
+        type: 'sure',
+        title: 'Nasr Suresi',
+        badge: 'Mushaf 110. Sure • 3 Ayet',
+        info: 'Mekke’nin fethini ve Allah’ın yardımına hamd ile istiğfar etmeyi bildirir.',
+        arabic: 'اِذَا جَآءَ نَصْرُ اللّٰهِ وَالْفَتْحُۙ ﴿١﴾ وَرَاَيْتَ النَّاسَ يَدْخُلُونَ ف۪ي د۪ينِ اللّٰهِ اَفْوَاجًاۙ ﴿٢﴾ فَسَبِّحْ بِحَمْدِ رَبِّكَ وَاسْتَغْفِرْهُۜ اِنَّهُ كَانَ تَوَّابًا ﴿٣﴾',
+        pronunciation: 'Bismillâhirrahmânirrahîm. İzâ câe nasrullâhi vel-feth. Ve raeyten-nâse yedhulûne fî dînillâhi efvâcâ. Fesebbih bihamdi rabbike vestağfirh. İnnehû kâne tevvâbâ.',
+        meaning: 'Allah’ın yardımı ve fetih geldiğinde ve insanların bölük bölük Allah’ın dinine girdiğini gördüğünde, Rabbine hamd ederek tespihte bulun ve O’ndan bağışlama dile. Çünkü O, tövbeleri çok kabul edendir.'
+    },
+    {
+        id: 'tahiyyat',
+        type: 'dua',
+        title: 'Tahiyyât (Ettahiyyâtü) Duası',
+        badge: 'Namaz Duası • Oturuş (Ka’de)',
+        info: 'Namazların her oturuşunda (ilk ve son ka’dede) okunması vacip olan duadır.',
+        arabic: 'اَلتَّحِيَّاتُ لِلّٰهِ وَالصَّلَوَاتُ وَالطَّيِّبَاتُۚ اَلسَّلَامُ عَلَيْكَ اَيُّهَا النَّبِيُّ وَرَحْمَةُ اللّٰهِ وَبَرَكَاتُهُۚ اَلسَّلَامُ عَلَيْنَا وَعَلٰى عِبَادِ اللّٰهِ الصَّالِح۪ينَۚ اَشْهَدُ اَنْ لَا اِلٰهَ اِلَّا اللّٰهُ وَاَشْهَدُ اَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ',
+        pronunciation: 'Ettahiyyâtü lillâhi ves-salevâtü vet-tayyibât. Esselâmü aleyke eyyühen-nebiyyü ve rahmetullâhi ve berekâtüh. Esselâmü aleynâ ve alâ ibâdillâhis-sâlihîn. Eşhedü en lâ ilâhe illallâh ve eşhedü enne Muhammeden abdühû ve rasûlüh.',
+        meaning: 'Dil ile, beden ve mal ile yapılan bütün ibadetler Allah’a dır. Ey Peygamber! Allah’ın selamı, rahmet ve bereketleri senin üzerine olsun. Selam bizim üzerimize ve Allah’ın bütün iyi (salih) kullarının üzerine olsun. Şahitlik ederim ki, Allah’tan başka ilah yoktur. Yine şahitlik ederim ki, Muhammed, O’nun kulu ve Peygamberidir.'
+    },
+    {
+        id: 'salli-barik',
+        type: 'dua',
+        title: 'Allahümme Salli ve Bârik Duaları',
+        badge: 'Namaz Duası • Son Oturuş',
+        info: 'Tüm namazların son oturuşunda Tahiyyat’tan sonra, ikindi ve yatsının ilk sünnetlerinde ise ilk oturuşta da okunur.',
+        arabic: 'اَللّٰهُمَّ صَلِّ عَلٰى مُحَمَّدٍ وَعَلٰى اٰلِ مُحَمَّدٍ كَمَا صَلَّيْتَ عَلٰى اِبْرٰه۪يمَ وَعَلٰى اٰلِ اِبْرٰه۪يمَ اِنَّكَ حَم۪يدٌ مَج۪يدٌ ❖ اَللّٰهُمَّ بَارِكْ عَلٰى مُحَمَّدٍ وَعَلٰى اٰلِ مُحَمَّدٍ كَمَا بَارَكْتَ عَلٰى اِبْرٰه۪يمَ وَعَلٰى اٰلِ اِبْرٰه۪يمَ اِنَّكَ حَم۪يدٌ مَج۪يدٌ',
+        pronunciation: 'Allâhümme salli alâ Muhammedin ve alâ âli Muhammed. Kemâ salleyte alâ İbrâhîme ve alâ âli İbrâhîm. İnneke hamîdün mecîd. ❖ Allâhümme bârik alâ Muhammedin ve alâ âli Muhammed. Kemâ bârekte alâ İbrâhîme ve alâ âli İbrâhîm. İnneke hamîdün mecîd.',
+        meaning: 'Allah’ım! Muhammed’e ve Muhammed’in ümmetine rahmet eyle; şerefini yücelt. İbrahim’e ve İbrahim’in ümmetine rahmet ettiğin gibi. Şüphesiz övülmeye layık yalnız sensin, şan ve şeref sahibi de sensin. ❖ Allah’ım! Muhammed’e ve Muhammed’in ümmetine hayır ve bereket ver. İbrahim’e ve İbrahim’in ümmetine verdiğin gibi. Şüphesiz övülmeye layık yalnız sensin, şan ve şeref sahibi de sensin.'
+    },
+    {
+        id: 'rabbena',
+        type: 'dua',
+        title: 'Rabbenâ Âtinâ ve Rabbenağfirlî Duaları',
+        badge: 'Namaz Duası • Selam Öncesi',
+        info: 'Namazların son oturuşunda Salli-Barik dualarından sonra selam vermeden önce okunur.',
+        arabic: 'رَبَّنَآ اٰتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْاٰخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ ❖ رَبَّنَا اغْفِرْ ل۪ي وَلِوَالِدَيَّ وَلِلْمُؤْمِن۪ينَ يَوْمَ يَقُومُ الْحِسَابُ',
+        pronunciation: 'Rabbenâ âtinâ fid-dünyâ haseneten ve fil-âhirati haseneten ve kınâ azâben-nâr. ❖ Rabbenağfirlî ve li-vâlideyye ve lil-mü’minîne yevme yekûmül-hisâb.',
+        meaning: 'Ey Rabbimiz! Bize dünyada da iyilik ve güzellik ver, ahirette de iyilik ve güzellik ver. Bizi cehennem azabından koru. ❖ Ey Rabbimiz! Hesap kurulacağı gün beni, ana-babamı ve bütün müminleri bağışla!'
+    },
+    {
+        id: 'kunut',
+        type: 'dua',
+        title: 'Kunut Duaları (1 ve 2)',
+        badge: 'Namaz Duası • Vitir 3. Rekat',
+        info: 'Yatsı namazının ardından kılınan Vitir namazının 3. rekatında tekbir alındıktan sonra okunur.',
+        arabic: 'اَللّٰهُمَّ اِنَّا نَسْتَع۪ينُكَ وَنَسْتَغْفِرُكَ وَنَسْتَهْد۪يكَ وَنُؤْمِنُ بِكَ وَنَتُوبُ اِلَيْكَ وَنَتَوَكَّلُ عَلَيْكَ وَنُثْن۪ي عَلَيْكَ الْخَيْرَ كُلَّهُ نَشْكُرُكَ وَلَا نَكْفُرُكَ وَنَخْلَعُ وَنَتْرُكُ مَنْ يَفْجُرُكَ ❖ اَللّٰهُمَّ اِيَّاكَ نَعْبُدُ وَلَكَ نُصَلّ۪ي وَنَسْجُدُ وَاِلَيْكَ نَسْعٰى وَنَحْفِدُ نَرْجُو رَحْمَتَكَ وَنَخْشٰى عَذَابَكَ اِنَّ عَذَابَكَ بِالْكُفَّارِ مُلْحِقٌ',
+        pronunciation: 'Allâhümme innâ nesteînüke ve nestağfirüke ve nestehdîk. Ve nü’minü bike ve netûbü ileyk. Ve netevekkelü aleyke ve nüsnî aleykel-hayra küllehû neşkürüke ve lâ nekfürük. Ve nahleu ve netrükü men yefcürük. ❖ Allâhümme iyyâke na’büdü ve leke nusallî ve nescüd. Ve ileyke nes’â ve nahfid. Nercû rahmeteke ve nahşâ azâbek. İnne azâbeke bil-küffâri mülhık.',
+        meaning: 'Allah’ım! Senden yardım isteriz, günahlarımızı bağışlamanı isteriz, razı olduğun şeylere hidayet etmeni isteriz. Sana inanırız, sana tövbe ederiz. Sana güveniriz. Bize verdiğin bütün nimetleri bilerek seni hayır ile överiz. Sana şükrederiz. Hiçbir nimetini inkâr etmez ve onları başkalarından bilmeyiz. Nimetlerini inkâr eden ve sana karşı geleni bırakırız. ❖ Allah’ım! Biz yalnız sana kulluk ederiz. Namazı yalnız senin için kılarız, ancak sana secde ederiz. Yalnız sana koşar ve sana yaklaştıracak şeyleri kazanmaya çalışırız. İbadetlerini sevinçle yaparız. Rahmetinin devamını ve çoğalmasını dileriz. Azabından korkarız, şüphesiz senin azabın kâfirlere ve inançsızlara ulaşır.'
+    }
+];
+
+let activeSurahFilter = 'all';
+let activeSurahSearch = '';
+let expandedSurahId = 'fatiha'; // İlk açılışta Fatiha Suresi açık gelsin
+
+function renderSurahList() {
+    const container = document.getElementById('surahListContainer');
+    if (!container) return;
+
+    const query = activeSurahSearch.trim().toLocaleLowerCase('tr-TR');
+
+    const filtered = SURAHS_AND_DUAS.filter((item) => {
+        const matchType = activeSurahFilter === 'all' || item.type === activeSurahFilter;
+        const matchSearch =
+            !query ||
+            item.title.toLocaleLowerCase('tr-TR').includes(query) ||
+            item.badge.toLocaleLowerCase('tr-TR').includes(query) ||
+            item.pronunciation.toLocaleLowerCase('tr-TR').includes(query) ||
+            item.meaning.toLocaleLowerCase('tr-TR').includes(query);
+        return matchType && matchSearch;
+    });
+
+    container.innerHTML = '';
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center text-slate-400 dark:text-slate-500 text-xs sm:text-sm">
+                Aramanızla eşleşen bir sure veya dua bulunamadı.
+            </div>
+        `;
+        return;
+    }
+
+    filtered.forEach((item) => {
+        const isExpanded = expandedSurahId === item.id;
+        const isSure = item.type === 'sure';
+
+        const card = document.createElement('div');
+        card.className = `rounded-2xl border transition-all overflow-hidden ${
+            isExpanded
+                ? 'border-emerald-500/70 dark:border-emerald-500/60 bg-emerald-50/30 dark:bg-slate-900 shadow-md'
+                : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/70 hover:border-emerald-500/40'
+        }`;
+
+        card.innerHTML = `
+            <button type="button" data-surah-toggle="${item.id}"
+                class="w-full p-4 flex items-center justify-between gap-3 text-left select-none">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm ${
+                        isExpanded
+                            ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                            : isSure
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-teal-500/10 text-teal-600 dark:text-teal-400'
+                    }">
+                        ${isSure ? '📖' : '🤲'}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h4 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">${item.title}</h4>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${
+                                isSure
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-teal-500/10 text-teal-700 dark:text-teal-300'
+                            }">
+                                ${item.badge}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">${item.info}</p>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-500 transition-transform ${
+                    isExpanded ? 'rotate-180 text-emerald-600 dark:text-emerald-400' : ''
+                }">
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                </div>
+            </button>
+
+            <div class="${isExpanded ? 'block' : 'hidden'} px-4 pb-5 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-4">
+                <!-- Arapça Metin Kartı -->
+                <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/70 dark:border-slate-800">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Arapça Yazılışı</span>
+                        <span class="text-[11px] text-slate-400">${item.info}</span>
+                    </div>
+                    <p dir="rtl" lang="ar" class="font-arabic text-2xl sm:text-3xl leading-[2.2] text-right text-slate-900 dark:text-slate-100">
+                        ${item.arabic}
+                    </p>
+                </div>
+
+                <!-- Türkçe Okunuşu -->
+                <div class="p-4 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/30 border border-emerald-500/20">
+                    <span class="block text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">
+                        Türkçe Okunuşu
+                    </span>
+                    <p class="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed italic">
+                        "${item.pronunciation}"
+                    </p>
+                </div>
+
+                <!-- Türkçe Meali / Anlamı -->
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800">
+                    <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                        Türkçe Meali (Anlamı)
+                    </span>
+                    <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                        ${item.meaning}
+                    </p>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+// ============================================================================
+// 7. AKILLI ZEKAT HESAPLAMA (CANLI DÖVİZ & ALTIN KURLARI API ENTEGRASYONU)
+// ============================================================================
+
+const ZEKAT_NISAP_GOLD_GRAMS = 80.18; // Diyanet İşleri Başkanlığı 80.18 gr 24 Ayar Altın Nisabı
+
+const zekatRates = {
+    goldGramTry: 3460.0,
+    silverGramTry: 42.5,
+    usdTry: 34.45,
+    eurTry: 37.35,
+    source: 'default'
+};
+
+function formatCurrencyTRY(amount) {
+    return new Intl.NumberFormat('tr-TR', {
+        style: 'currency',
+        currency: 'TRY',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount || 0);
+}
+
+function populateZekatRateInputs() {
+    const goldIn = document.getElementById('rateGoldInput');
+    const silverIn = document.getElementById('rateSilverInput');
+    const usdIn = document.getElementById('rateUsdInput');
+    const eurIn = document.getElementById('rateEurInput');
+
+    if (goldIn) goldIn.value = zekatRates.goldGramTry.toFixed(2);
+    if (silverIn) silverIn.value = zekatRates.silverGramTry.toFixed(2);
+    if (usdIn) usdIn.value = zekatRates.usdTry.toFixed(2);
+    if (eurIn) eurIn.value = zekatRates.eurTry.toFixed(2);
+}
+
+async function fetchLiveZekatRates(showFeedback = false) {
+    const badge = document.getElementById('zekatRateStatusBadge');
+    if (badge) {
+        badge.textContent = 'Kurlar Güncelleniyor...';
+    }
+
+    try {
+        // Canlı Döviz ve Altın/Gümüş Ons verisi için açık CORS destekli API'ler
+        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (!res.ok) throw new Error('Kur servisi yanıt vermedi');
+        const data = await res.json();
+
+        if (data && data.rates && data.rates.TRY) {
+            const usdTry = Number(data.rates.TRY);
+            const eurUsd = Number(data.rates.EUR) || 0.92;
+            const eurTry = usdTry / eurUsd;
+
+            zekatRates.usdTry = Math.round(usdTry * 100) / 100;
+            zekatRates.eurTry = Math.round(eurTry * 100) / 100;
+
+            // Eğer API XAU (Ons Altın) döndürüyorsa veya uluslararası spot ons (~2735$) üzerinden 24 ayar gram altın hesapla
+            // 1 Troy Ons = 31.1034768 gram
+            let xauUsd = 2740;
+            let xagUsd = 33.2;
+
+            if (data.rates.XAU && Number(data.rates.XAU) > 0) {
+                xauUsd = 1 / Number(data.rates.XAU);
+            }
+            if (data.rates.XAG && Number(data.rates.XAG) > 0) {
+                xagUsd = 1 / Number(data.rates.XAG);
+            }
+
+            zekatRates.goldGramTry = Math.round(((xauUsd * usdTry) / 31.1035) * 100) / 100;
+            zekatRates.silverGramTry = Math.round(((xagUsd * usdTry) / 31.1035) * 100) / 100;
+            zekatRates.source = 'live';
+
+            populateZekatRateInputs();
+            calculateZekat();
+
+            if (badge) {
+                badge.textContent = 'Canlı Kurlar Aktif ✓';
+                badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+            }
+            if (showFeedback) {
+                showToast('Canlı Kurlar Güncellendi', 'Altın, gümüş, Dolar ve Euro kurları anlık piyasa verileriyle eşitlendi.', 'emerald');
+            }
+            return;
+        }
+    } catch (e) {
+        // Yedek kurlarla devam et
+    }
+
+    populateZekatRateInputs();
+    calculateZekat();
+    if (badge) {
+        badge.textContent = 'Piyasa Kurları (Düzenlenebilir)';
+    }
+}
+
+function calculateZekat() {
+    const rateGold = Math.max(0, Number(document.getElementById('rateGoldInput')?.value) || zekatRates.goldGramTry);
+    const rateSilver = Math.max(0, Number(document.getElementById('rateSilverInput')?.value) || zekatRates.silverGramTry);
+    const rateUsd = Math.max(0, Number(document.getElementById('rateUsdInput')?.value) || zekatRates.usdTry);
+    const rateEur = Math.max(0, Number(document.getElementById('rateEurInput')?.value) || zekatRates.eurTry);
+
+    const cashTry = Math.max(0, Number(document.getElementById('zekatCashTry')?.value) || 0);
+    const goldGrams = Math.max(0, Number(document.getElementById('zekatGoldGrams')?.value) || 0);
+    const silverGrams = Math.max(0, Number(document.getElementById('zekatSilverGrams')?.value) || 0);
+    const usdAmount = Math.max(0, Number(document.getElementById('zekatUsdAmount')?.value) || 0);
+    const eurAmount = Math.max(0, Number(document.getElementById('zekatEurAmount')?.value) || 0);
+    const debtTry = Math.max(0, Number(document.getElementById('zekatDebtTry')?.value) || 0);
+
+    const totalAssetsTry =
+        cashTry +
+        goldGrams * rateGold +
+        silverGrams * rateSilver +
+        usdAmount * rateUsd +
+        eurAmount * rateEur;
+
+    const netWorthTry = Math.max(0, totalAssetsTry - debtTry);
+    const nisapThresholdTry = ZEKAT_NISAP_GOLD_GRAMS * rateGold;
+    const isAboveNisap = netWorthTry >= nisapThresholdTry && nisapThresholdTry > 0;
+    const payableZekatTry = isAboveNisap ? netWorthTry * 0.025 : 0;
+
+    const nisapBadge = document.getElementById('zekatNisapStatusBadge');
+    const nisapText = document.getElementById('zekatNisapThresholdText');
+    const totalEl = document.getElementById('zekatTotalNetWorth');
+    const payableEl = document.getElementById('zekatPayableAmount');
+    const payableSub = document.getElementById('zekatPayableSub');
+
+    if (nisapText) {
+        nisapText.textContent = `Nisap Alt Sınırı (80.18 gr Altın): ${formatCurrencyTRY(nisapThresholdTry)}`;
+    }
+    if (totalEl) {
+        totalEl.textContent = formatCurrencyTRY(netWorthTry);
+    }
+    if (payableEl) {
+        payableEl.textContent = formatCurrencyTRY(payableZekatTry);
+    }
+
+    if (nisapBadge && payableSub) {
+        if (netWorthTry === 0) {
+            nisapBadge.textContent = 'Varlık Bilgisi Giriniz';
+            nisapBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white';
+            payableSub.textContent = 'Nakit, altın, gümüş veya döviz varlığınızı girdiğinizde otomatik hesaplanır.';
+        } else if (isAboveNisap) {
+            nisapBadge.textContent = '✓ Nisap Miktarına Ulaştı (Zekat Farzdır)';
+            nisapBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-950 shadow-sm';
+            payableSub.textContent = `Net varlığınız 80.18 gr altın sınırını aştığı için %2,5 (1/40) zekat tutarınız hesaplanmıştır.`;
+        } else {
+            const remaining = Math.max(0, nisapThresholdTry - netWorthTry);
+            nisapBadge.textContent = 'Nisap Sınırının Altında (Zekat Gerekmez)';
+            nisapBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/25 text-white';
+            payableSub.textContent = `Nisap sınırına ulaşmak için ${formatCurrencyTRY(remaining)} daha varlık gerekmektedir.`;
+        }
+    }
+}
+
+// ============================================================================
+// 8. GÜNLÜK DİNİ BİLGİ QUİZİ (5 SORU & KONFETİ KUTLAMASI)
+// ============================================================================
+
+const QUIZ_QUESTION_POOL = [
+    {
+        category: 'Namaz & Fıkıh',
+        question: 'Günde 5 vakit kılınan namazların (Sabah, Öğle, İkindi, Akşam, Yatsı ve Vitir dahil) toplam rekat sayısı kaçtır?',
+        options: ['32 Rekat', '40 Rekat', '20 Rekat', '45 Rekat'],
+        correctIndex: 1,
+        explanation: 'Sabah (4), Öğle (10), İkindi (8), Akşam (5) ve Yatsı + Vitir (13) olmak üzere günde toplam 40 rekattır.'
+    },
+    {
+        category: 'Kur’an-ı Kerim',
+        question: 'Kur’an-ı Kerim’in her rekatta okunması vacip olan ilk suresi hangisidir?',
+        options: ['Bakara Suresi', 'İhlâs Suresi', 'Fâtiha Suresi', 'Yâsîn Suresi'],
+        correctIndex: 2,
+        explanation: 'Mushaf sıralamasında 1. sure olan Fâtiha Suresi ("Ümmü’l-Kitâb"), namazların her rekatında okunur.'
+    },
+    {
+        category: 'Zekat & İbadet',
+        question: 'İslam fıkhına göre altının zekat nisap miktarı (alt sınırı) yaklaşık kaç gramdır?',
+        options: ['40.18 gram', '80.18 gram', '100 gram', '20 gram'],
+        correctIndex: 1,
+        explanation: '20 miskal altın, günümüz ölçüsüyle Diyanet İşleri Başkanlığı tarafından 80.18 gram 24 ayar altın olarak hesaplanır.'
+    },
+    {
+        category: 'Siyer-i Nebi',
+        question: 'Beş vakit namaz, Peygamber Efendimiz’e (s.a.v.) hangi mübarek gecede farz kılınmıştır?',
+        options: ['Kadir Gecesi', 'Berat Gecesi', 'Miraç Gecesi', 'Regaip Gecesi'],
+        correctIndex: 2,
+        explanation: 'Beş vakit namaz, hicretten yaklaşık bir buçuk yıl önce Miraç Gecesi’nde bizzat Allah Teâlâ tarafından farz kılınmıştır.'
+    },
+    {
+        category: 'Namaz & Fıkıh',
+        question: 'Namaza başlarken elleri kaldırıp "Allâhü Ekber" demeye ne ad verilir?',
+        options: ['İftitah Tekbiri', 'Kıyam', 'Ka’de-i Ahîre', 'Kıraat'],
+        correctIndex: 0,
+        explanation: 'Namaza giriş tekbirine "İftitah Tekbiri" (veya Tahrîme) denir ve namazın dışındaki/içindeki farzlarındandır.'
+    },
+    {
+        category: 'Kur’an-ı Kerim',
+        question: 'Kur’an-ı Kerim’in en kısa suresi olan ve 3 ayetten oluşan sure hangisidir?',
+        options: ['İhlâs Suresi', 'Kevser Suresi', 'Asr Suresi', 'Fîl Suresi'],
+        correctIndex: 1,
+        explanation: 'Kevser Suresi 3 ayettir ve Kur’an-ı Kerim’in kelime ve harf bakımından en kısa suresidir.'
+    },
+    {
+        category: 'Namaz & Fıkıh',
+        question: 'Kunut duaları hangi namazın kaçıncı rekatında okunur?',
+        options: ['Sabah namazının 2. rekatında', 'Vitir namazının 3. rekatında', 'Akşam namazının 3. rekatında', 'Yatsı namazının 4. rekatında'],
+        correctIndex: 1,
+        explanation: 'Kunut duaları, yatsı namazından sonra kılınan 3 rekatlık Vitir namazının 3. rekatında Fâtiha ve zamm-ı sureden sonra tekbir alınarak okunur.'
+    },
+    {
+        category: 'İslam Tarihi',
+        question: 'İslam tarihinde ilk ezanı okuyan ve Peygamberimizin müezzini olan sahabi kimdir?',
+        options: ['Hz. Enes bin Mâlik (r.a.)', 'Hz. Bilâl-i Habeşî (r.a.)', 'Hz. Selmân-ı Fârisî (r.a.)', 'Hz. Mus’ab bin Umeyr (r.a.)'],
+        correctIndex: 1,
+        explanation: 'İlk ezanı gür ve güzel sesiyle Hz. Bilâl-i Habeşî (r.a.) okumuştur.'
+    },
+    {
+        category: 'Namaz & Fıkıh',
+        question: 'Abdestin farzları Kur’an-ı Kerim’in hangi suresinde açıkça bildirilmiştir?',
+        options: ['Mâide Suresi 6. Ayet', 'Bakara Suresi 183. Ayet', 'Nûr Suresi 31. Ayet', 'Âl-i İmrân Suresi 102. Ayet'],
+        correctIndex: 0,
+        explanation: 'Yüzü yıkamak, kolları dirseklerle beraber yıkamak, başıط mesh etmek ve ayakları yıkamak Mâide Suresi 6. ayette emredilmiştir.'
+    },
+    {
+        category: 'Kıble & Kâbe',
+        question: 'Müslümanların kıblesi Mescid-i Aksâ’dan Kâbe-i Muazzama’ya hicretin kaçıncı yılında çevrilmiştir?',
+        options: ['Hicretten 3 yıl önce', 'Hicretin 2. yılında (16-17 ay sonra)', 'Hicretin 8. yılında', 'Hicretin 10. yılında'],
+        correctIndex: 1,
+        explanation: 'Hicretten yaklaşık 16-17 ay sonra (Hicri 2. yılda) Kıble ayeti inerek yönümüz Kâbe’ye (Mescid-i Harâm) çevrilmiştir.'
+    },
+    {
+        category: 'Zekat & İbadet',
+        question: 'Nisap miktarına ulaşmış altın, gümüş, nakit para ve ticaret mallarından hangi oranda zekat verilir?',
+        options: ['Yüzde 10 (1/10)', 'Yüzde 2.5 (Kırkta bir - 1/40)', 'Yüzde 5 (1/20)', 'Yüzde 20 (1/5)'],
+        correctIndex: 1,
+        explanation: 'Altın, gümüş, nakit ve ticaret mallarında zekat oranı kırkta bir (%2,5) olarak belirlenmiştir.'
+    },
+    {
+        category: 'Kur’an-ı Kerim',
+        question: 'Başında Besmele bulunmayan tek sure hangisidir?',
+        options: ['Neml Suresi', 'Tevbe Suresi', 'Yûnus Suresi', 'Kehf Suresi'],
+        correctIndex: 1,
+        explanation: 'Tevbe (Berâe) Suresi başında Besmele yer almaz; Neml Suresi’nde ise iki Besmele bulunur.'
+    }
+];
+
+const quizState = {
+    questions: [],
+    currentIndex: 0,
+    score: 0,
+    answered: false
+};
+
+function startNewQuiz(useDailySeed = false) {
+    const pool = [...QUIZ_QUESTION_POOL];
+
+    if (useDailySeed) {
+        // Günün tarihine göre deterministik karıştırma (Her gün 5 soru)
+        const todayStr = toDateKey(new Date());
+        let seed = 0;
+        for (let i = 0; i < todayStr.length; i++) {
+            seed = (seed * 31 + todayStr.charCodeAt(i)) >>> 0;
+        }
+        pool.sort((a, b) => {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            return (seed % 3) - 1;
+        });
+    } else {
+        // Rastgele yeni 5 soru
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+    }
+
+    quizState.questions = pool.slice(0, 5);
+    quizState.currentIndex = 0;
+    quizState.score = 0;
+    quizState.answered = false;
+
+    document.getElementById('quizQuestionContainer')?.classList.remove('hidden');
+    document.getElementById('quizResultContainer')?.classList.add('hidden');
+
+    renderCurrentQuizQuestion();
+}
+
+function renderCurrentQuizQuestion() {
+    const q = quizState.questions[quizState.currentIndex];
+    if (!q) return;
+
+    quizState.answered = false;
+
+    const badge = document.getElementById('quizProgressBadge');
+    const catEl = document.getElementById('quizCategoryTag');
+    const textEl = document.getElementById('quizQuestionText');
+    const optionsEl = document.getElementById('quizOptionsList');
+    const feedbackBox = document.getElementById('quizFeedbackBox');
+
+    if (badge) badge.textContent = `Soru ${quizState.currentIndex + 1} / ${quizState.questions.length} • Doğru: ${quizState.score}`;
+    if (catEl) catEl.textContent = q.category;
+    if (textEl) textEl.textContent = q.question;
+    if (feedbackBox) feedbackBox.classList.add('hidden');
+
+    if (!optionsEl) return;
+    optionsEl.innerHTML = '';
+
+    const letters = ['A', 'B', 'C', 'D'];
+    q.options.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.optionIndex = String(idx);
+        btn.className = 'w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 hover:border-emerald-500 dark:hover:border-emerald-500 text-left transition flex items-center gap-3 group';
+        btn.innerHTML = `
+            <span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-emerald-500/15 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 text-slate-600 dark:text-slate-300 transition">
+                ${letters[idx]}
+            </span>
+            <span class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100">${optText}</span>
+        `;
+        btn.addEventListener('click', () => handleQuizOptionSelect(idx));
+        optionsEl.appendChild(btn);
+    });
+}
+
+function handleQuizOptionSelect(selectedIndex) {
+    if (quizState.answered) return;
+    quizState.answered = true;
+
+    const q = quizState.questions[quizState.currentIndex];
+    const isCorrect = selectedIndex === q.correctIndex;
+    if (isCorrect) {
+        quizState.score += 1;
+        playSoftCheckSound();
+    }
+
+    const badge = document.getElementById('quizProgressBadge');
+    if (badge) {
+        badge.textContent = `Soru ${quizState.currentIndex + 1} / ${quizState.questions.length} • Doğru: ${quizState.score}`;
+    }
+
+    const optionButtons = document.querySelectorAll('#quizOptionsList button');
+    optionButtons.forEach((btn, idx) => {
+        btn.disabled = true;
+        if (idx === q.correctIndex) {
+            btn.className = 'w-full p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 text-left transition flex items-center gap-3';
+        } else if (idx === selectedIndex && !isCorrect) {
+            btn.className = 'w-full p-3.5 rounded-xl border-2 border-rose-500 bg-rose-500/10 text-left transition flex items-center gap-3';
+        } else {
+            btn.className = 'w-full p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 opacity-60 text-left transition flex items-center gap-3';
+        }
+    });
+
+    const feedbackBox = document.getElementById('quizFeedbackBox');
+    const feedbackText = document.getElementById('quizFeedbackText');
+    const nextBtnLabel = document.getElementById('quizNextBtnLabel');
+
+    if (feedbackBox && feedbackText) {
+        feedbackBox.classList.remove('hidden');
+        feedbackBox.className = `p-4 rounded-xl border text-xs sm:text-sm space-y-2 ${
+            isCorrect
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+        }`;
+        feedbackText.innerHTML = `${isCorrect ? '✅ <strong>Doğru Cevap!</strong> ' : '💡 <strong>Bilgi Notu:</strong> '}${q.explanation}`;
+    }
+
+    if (nextBtnLabel) {
+        nextBtnLabel.textContent =
+            quizState.currentIndex + 1 < quizState.questions.length ? 'Sonraki Soru' : 'Sonucu Gör';
+    }
+}
+
+function launchVictoryConfetti() {
+    if (typeof window.confetti !== 'function') return;
+    try {
+        window.confetti({
+            particleCount: 90,
+            spread: 75,
+            origin: { y: 0.6 },
+            colors: ['#10b981', '#059669', '#f59e0b', '#34d399', '#fbbf24']
+        });
+        setTimeout(() => {
+            window.confetti({
+                particleCount: 60,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0 },
+                colors: ['#10b981', '#f59e0b', '#34d399']
+            });
+            window.confetti({
+                particleCount: 60,
+                angle: 120,
+                spread: 55,
+                origin: { x: 1 },
+                colors: ['#10b981', '#f59e0b', '#34d399']
+            });
+        }, 300);
+    } catch (e) {
+        // ignore
+    }
+}
+
+function showQuizResults() {
+    document.getElementById('quizQuestionContainer')?.classList.add('hidden');
+    const resultContainer = document.getElementById('quizResultContainer');
+    resultContainer?.classList.remove('hidden');
+
+    const total = quizState.questions.length;
+    const score = quizState.score;
+    const isPerfect = score === total;
+
+    const badgeIcon = document.getElementById('quizResultBadgeIcon');
+    const winnerPill = document.getElementById('quizWinnerPill');
+    const titleEl = document.getElementById('quizResultTitle');
+    const subtitleEl = document.getElementById('quizResultSubtitle');
+
+    if (isPerfect) {
+        if (badgeIcon) badgeIcon.textContent = '🌟';
+        if (winnerPill) {
+            winnerPill.textContent = '🏆 Günün Yıldızlı Âlimi Rozeti Kazanıldı!';
+            winnerPill.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30';
+        }
+        if (titleEl) {
+            titleEl.textContent = 'Tebrikler! Bugünün sınavını başarıyla geçtin 🌟';
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = `${total} sorunun ${score} tanesini de eksiksiz ve doğru cevapladınız. Maşallah!`;
+        }
+        playGentleNotificationChime(true);
+        launchVictoryConfetti();
+    } else {
+        if (badgeIcon) badgeIcon.textContent = '📘';
+        if (winnerPill) {
+            winnerPill.textContent = `Skorunuz: ${total} Soruda ${score} Doğru`;
+            winnerPill.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+        }
+        if (titleEl) {
+            titleEl.textContent = score >= 3 ? 'Çok İyi Gidiyorsun! Yıldızlı Rozete Çok Yaklaştın' : 'Güzel Bir Denemeydi, Bilgilerini Tazeledin!';
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = `5'te 5 yaparak "Tebrikler! Bugünün sınavını başarıyla geçtin 🌟" rozetini kazanmak için tekrar deneyebilirsin.`;
+        }
+    }
+}
+
+// ============================================================================
+// 9. SEKME GEÇİŞLERİ VE TÜM ARAYÜZ BAĞLANTILARI
+// ============================================================================
+
 function switchMainTab(tabName) {
     const tabs = {
         daily: {
@@ -1930,11 +2661,23 @@ function switchMainTab(tabName) {
         qibla: {
             btn: document.getElementById('tabQiblaBtn'),
             section: document.getElementById('qiblaSection')
+        },
+        surahs: {
+            btn: document.getElementById('tabSurahsBtn'),
+            section: document.getElementById('surahsSection')
+        },
+        zekat: {
+            btn: document.getElementById('tabZekatBtn'),
+            section: document.getElementById('zekatSection')
+        },
+        quiz: {
+            btn: document.getElementById('tabQuizBtn'),
+            section: document.getElementById('quizSection')
         }
     };
 
-    const activeClass = 'flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-1.5';
-    const inactiveClass = 'flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
+    const activeClass = 'justify-center px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1.5';
+    const inactiveClass = 'justify-center px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
 
     Object.keys(tabs).forEach((key) => {
         const item = tabs[key];
@@ -1950,6 +2693,10 @@ function switchMainTab(tabName) {
 
     if (tabName === 'qibla') {
         renderQiblaCompassUI();
+    } else if (tabName === 'surahs') {
+        renderSurahList();
+    } else if (tabName === 'zekat') {
+        calculateZekat();
     }
 }
 
@@ -1961,6 +2708,7 @@ function renderAll() {
     renderPrayerList();
     renderKazaSection();
     renderQiblaCompassUI();
+    renderSurahList();
     renderNotificationUI();
     renderStats();
 }
@@ -2115,10 +2863,88 @@ function setupEventListeners() {
         }, 1500);
     });
 
-    // Sekme Geçişleri (5 Vakit | Kaza | Kıble Pusulası)
-    document.getElementById('tabDailyBtn').addEventListener('click', () => switchMainTab('daily'));
-    document.getElementById('tabKazaBtn').addEventListener('click', () => switchMainTab('kaza'));
-    document.getElementById('tabQiblaBtn').addEventListener('click', () => switchMainTab('qibla'));
+    // Ana Sekme Geçişleri (6 Modül)
+    document.getElementById('tabDailyBtn')?.addEventListener('click', () => switchMainTab('daily'));
+    document.getElementById('tabKazaBtn')?.addEventListener('click', () => switchMainTab('kaza'));
+    document.getElementById('tabQiblaBtn')?.addEventListener('click', () => switchMainTab('qibla'));
+    document.getElementById('tabSurahsBtn')?.addEventListener('click', () => switchMainTab('surahs'));
+    document.getElementById('tabZekatBtn')?.addEventListener('click', () => switchMainTab('zekat'));
+    document.getElementById('tabQuizBtn')?.addEventListener('click', () => switchMainTab('quiz'));
+
+    // Sure & Dua Rehberi Etkileşimleri
+    document.getElementById('surahSearchInput')?.addEventListener('input', (e) => {
+        activeSurahSearch = e.target.value || '';
+        renderSurahList();
+    });
+
+    document.querySelectorAll('[data-surah-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            activeSurahFilter = btn.getAttribute('data-surah-filter') || 'all';
+            document.querySelectorAll('[data-surah-filter]').forEach((b) => {
+                if (b.getAttribute('data-surah-filter') === activeSurahFilter) {
+                    b.className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm transition';
+                } else {
+                    b.className = 'px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition';
+                }
+            });
+            renderSurahList();
+        });
+    });
+
+    document.getElementById('surahListContainer')?.addEventListener('click', (e) => {
+        const toggleBtn = e.target.closest('[data-surah-toggle]');
+        if (!toggleBtn) return;
+        const id = toggleBtn.getAttribute('data-surah-toggle');
+        expandedSurahId = expandedSurahId === id ? null : id;
+        renderSurahList();
+    });
+
+    // Akıllı Zekat Hesaplama Etkileşimleri
+    const zekatInputIds = [
+        'rateGoldInput',
+        'rateSilverInput',
+        'rateUsdInput',
+        'rateEurInput',
+        'zekatCashTry',
+        'zekatGoldGrams',
+        'zekatSilverGrams',
+        'zekatUsdAmount',
+        'zekatEurAmount',
+        'zekatDebtTry'
+    ];
+    zekatInputIds.forEach((inputId) => {
+        document.getElementById(inputId)?.addEventListener('input', calculateZekat);
+    });
+
+    document.getElementById('refreshRatesBtn')?.addEventListener('click', () => {
+        fetchLiveZekatRates(true);
+    });
+
+    document.getElementById('zekatClearBtn')?.addEventListener('click', () => {
+        ['zekatCashTry', 'zekatGoldGrams', 'zekatSilverGrams', 'zekatUsdAmount', 'zekatEurAmount', 'zekatDebtTry'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        calculateZekat();
+    });
+
+    // Günlük Dini Bilgi Quizi Etkileşimleri
+    document.getElementById('quizNextBtn')?.addEventListener('click', () => {
+        if (quizState.currentIndex + 1 < quizState.questions.length) {
+            quizState.currentIndex += 1;
+            renderCurrentQuizQuestion();
+        } else {
+            showQuizResults();
+        }
+    });
+
+    document.getElementById('restartQuizBtn')?.addEventListener('click', () => {
+        startNewQuiz(false);
+    });
+
+    document.getElementById('quizPlayAgainBtn')?.addEventListener('click', () => {
+        startNewQuiz(false);
+    });
 
     // Kaza Çetelesi Artır / Azalt
     document.getElementById('kazaList').addEventListener('click', (e) => {
@@ -2156,6 +2982,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initCitySelect();
     updateQiblaForSelectedCity();
     initPWA();
+    populateZekatRateInputs();
+    fetchLiveZekatRates(false);
+    startNewQuiz(true);
     setupEventListeners();
     renderAll();
     updateLiveClockAndCountdown();
@@ -2163,3 +2992,4 @@ document.addEventListener('DOMContentLoaded', () => {
     syncPrayerTimings(false);
     restoreFromCloudIfNeeded(false);
 });
+
