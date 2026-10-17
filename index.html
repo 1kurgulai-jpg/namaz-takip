@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="tr" class="scroll-smooth overflow-x-hidden">
+<html lang="tr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>BakVakitGeldi — Namaz, Vakit, Kıble & Kaza Takip Uygulaması</title>
     <!-- PWA & Mobil Uygulama Meta Etiketleri -->
-    <meta name="theme-color" content="#059669">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="BakVakitGeldi">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="manifest.json?v=7">
+    <link rel="manifest" href="manifest.json?v=8">
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
@@ -54,9 +55,9 @@
     <!-- Canvas Confetti (Quiz 5/5 Kutlaması İçin) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
 </head>
-<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-[100svh] w-full max-w-full transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
 
     <!-- Arka Plan Dekoratif Işıklar -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
@@ -64,17 +65,17 @@
         <div class="absolute top-1/3 -right-24 w-72 sm:w-96 h-72 sm:h-96 bg-teal-500/10 dark:bg-teal-500/5 rounded-full blur-3xl"></div>
     </div>
 
-    <!-- Bildirim / Uyarı Toast Alanı (Mobil Taşma Korumalı) -->
-    <div id="toastContainer" class="fixed bottom-4 inset-x-3 sm:left-auto sm:right-5 z-50 flex flex-col gap-2 sm:w-full sm:max-w-sm pointer-events-none"></div>
+    <!-- Bildirim / Uyarı Toast Alanı (Mobil & Safe-Area Korumalı) -->
+    <div id="toastContainer" class="app-toast-container fixed inset-x-3 sm:left-auto sm:right-5 z-50 flex flex-col gap-2 sm:w-full sm:max-w-sm pointer-events-none"></div>
 
-    <!-- Üst Bar (Header) -->
-    <header class="sticky top-0 z-30 w-full max-w-full overflow-hidden backdrop-blur-xl bg-white/85 dark:bg-slate-900/85 border-b border-slate-200/80 dark:border-slate-800/80">
-        <div class="max-w-3xl w-full mx-auto px-3 sm:px-6 py-2.5 sm:py-0 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-2">
+    <!-- Üst Bar (Header — iPhone Çentik / Dynamic Island Safe Area Korumalı) -->
+    <header class="app-header backdrop-blur-xl bg-white/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800/80 shadow-sm">
+        <div class="max-w-3xl w-full mx-auto px-3 sm:px-6 min-h-[56px] sm:min-h-[64px] py-2 flex items-center justify-between gap-1.5 sm:gap-2">
             <!-- Logo & Başlık -->
             <div class="flex items-center gap-2 sm:gap-3 min-w-0">
                 <img src="logo.png?v=2" alt="BakVakitGeldi Logo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover shadow-md border border-emerald-500/30 bg-white shrink-0" />
                 <div class="min-w-0">
-                    <h1 class="font-extrabold text-base sm:text-xl tracking-tight leading-none truncate">
+                    <h1 class="font-extrabold text-base sm:text-xl tracking-tight leading-tight truncate">
                         <span class="bg-gradient-to-r from-emerald-500 via-teal-500 to-teal-700 dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-500 bg-clip-text text-transparent">Bak</span><span class="text-slate-800 dark:text-white">VakitGeldi</span>
                     </h1>
                     <div class="flex items-center gap-1.5 mt-0.5 truncate">
@@ -132,7 +133,7 @@
     </header>
 
     <!-- Ana İçerik -->
-    <main class="w-full max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-16 overflow-x-hidden">
+    <main class="app-main py-4 sm:py-6 space-y-4 sm:space-y-6 pb-16 overflow-x-hidden">
 
         <!-- PWA (Ana Ekrana Ekleme) Bildirim Çubuğu -->
         <section id="pwaInstallBanner" class="w-full overflow-hidden bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 dark:from-slate-900 dark:via-emerald-950/90 dark:to-slate-900 text-white rounded-2xl p-3.5 sm:p-4 shadow-md border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -881,7 +882,7 @@
     </main>
 
     <!-- Alt Bilgi -->
-    <footer class="w-full max-w-full overflow-hidden text-center py-6 px-4 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900 space-y-1">
+    <footer class="app-footer overflow-hidden text-center pt-6 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900 space-y-1">
         <div>
             <span class="font-bold"><span class="text-emerald-600 dark:text-emerald-400">Bak</span><span class="text-slate-700 dark:text-slate-300">VakitGeldi</span></span> • 81 İl Diyanet Namaz Vakitleri • Kıble Pusulası • Ezan Bildirimleri
         </div>
@@ -891,6 +892,6 @@
     </footer>
 
     <!-- Uygulama Scripti -->
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>

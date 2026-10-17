@@ -1858,7 +1858,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=7', { updateViaCache: 'none' })
+            .register('./sw.js?v=8', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
