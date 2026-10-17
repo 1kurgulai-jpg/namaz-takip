@@ -14,7 +14,10 @@ const STORAGE_KEYS = {
     TIMINGS_CACHE: 'nurvakit_timings_cache_v1',
     NOTIF_ENABLED: 'bakvakitgeldi_notif_enabled_v1',
     NOTIFIED_LOG: 'bakvakitgeldi_notified_log_v1',
-    DEVICE_UUID: 'bakvakitgeldi_device_uuid_v1'
+    DEVICE_UUID: 'bakvakitgeldi_device_uuid_v1',
+    SOUND_ENABLED: 'bakvakitgeldi_sound_enabled_v1',
+    SOUND_TONE: 'bakvakitgeldi_sound_tone_v1',
+    PWA_BANNER_DISMISSED: 'bakvakitgeldi_pwa_dismissed_v1'
 };
 
 // Firebase Firestore Bulut Yapılandırması (Varsayılan 공용 Firestore REST & Çok Katmanlı Bulut Yedekleme)
@@ -259,6 +262,8 @@ const state = {
     activePrayerIdNow: null,
     activeVakitKeyNow: null,
     notificationsEnabled: false,
+    soundEnabled: true,
+    soundTone: 'huzur', // 'huzur' | 'kristal' | 'ney'
     notifiedLog: {},
     qibla: {
         lat: 41.0082,
@@ -715,31 +720,115 @@ function requestGpsForQibla() {
 }
 
 // ============================================================================
-// 3. EZAN VAKTİ BİLDİRİMLERİ (NOTIFICATION API & SESLİ UYARI)
+// 3. EZAN VAKTİ BİLDİRİMLERİ & İSTEĞE BAĞLI ZARİF SES EFEKTLERİ
 // ============================================================================
 
-function playGentleNotificationChime() {
+function playGentleNotificationChime(forcePlay = false) {
+    if (!forcePlay && !state.soundEnabled) return;
+
     try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return;
         const ctx = new AudioCtx();
-        const notes = [523.25, 659.25, 783.99]; // C5 - E5 - G5 huzurlu akor
-        notes.forEach((freq, idx) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.18);
-            gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.18);
-            gain.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + idx * 0.18 + 0.04);
-            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + idx * 0.18 + 0.9);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(ctx.currentTime + idx * 0.18);
-            osc.stop(ctx.currentTime + idx * 0.18 + 0.95);
-        });
+        const tone = state.soundTone || 'huzur';
+
+        if (tone === 'kristal') {
+            // Zarif Kristal Çan: Berrak yüksek frekanslı çan tınısı
+            const notes = [880, 1318.51, 1760]; // A5 - E6 - A6
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                const start = ctx.currentTime + idx * 0.14;
+                osc.frequency.setValueAtTime(freq, start);
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(0.11 / (idx + 1), start + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(start);
+                osc.stop(start + 1.3);
+            });
+        } else if (tone === 'ney') {
+            // Sıcak Ney Esintisi: Derin, huzurlu ve yumuşak akustik geçiş
+            const notes = [293.66, 440.0, 587.33]; // D4 - A4 - D5
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                const start = ctx.currentTime + idx * 0.25;
+                osc.frequency.setValueAtTime(freq, start);
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(0.12, start + 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(start);
+                osc.stop(start + 1.4);
+            });
+        } else {
+            // Huzur Tınısı (Varsayılan): Yumuşak majör-7 akoru
+            const notes = [523.25, 659.25, 783.99, 987.77]; // C5 - E5 - G5 - B5
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                const start = ctx.currentTime + idx * 0.16;
+                osc.frequency.setValueAtTime(freq, start);
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(0.13, start + 0.04);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.95);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(start);
+                osc.stop(start + 1.0);
+            });
+        }
     } catch (e) {
         // ignore audio restriction
     }
+}
+
+// Namaz "Kılındı" işaretlendiğinde çalan çok hafif, zarif onay tınısı
+function playSoftCheckSound() {
+    if (!state.soundEnabled) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.2);
+    } catch (e) {
+        // ignore
+    }
+}
+
+function toggleSoundEnabled() {
+    state.soundEnabled = !state.soundEnabled;
+    localStorage.setItem(STORAGE_KEYS.SOUND_ENABLED, state.soundEnabled ? '1' : '0');
+    renderNotificationUI();
+    if (state.soundEnabled) {
+        playGentleNotificationChime(true);
+        showToast('Sesli Uyarı Açıldı', 'Ezan vakti girdiğinde seçtiğiniz zarif bildirim sesi çalınacak.', 'emerald');
+    } else {
+        showToast('Sesli Uyarı Kapatıldı', 'Bildirimler sessiz olarak gösterilecek.', 'amber');
+    }
+}
+
+function setSoundTone(toneId) {
+    state.soundTone = toneId;
+    localStorage.setItem(STORAGE_KEYS.SOUND_TONE, toneId);
+    playGentleNotificationChime(true);
 }
 
 function showToast(title, message, color = 'emerald') {
@@ -772,16 +861,34 @@ function showToast(title, message, color = 'emerald') {
     }, 5000);
 }
 
-function sendEzanNotification(title, bodyText) {
-    playGentleNotificationChime();
+function sendEzanNotification(title, bodyText, forceSound = false) {
+    playGentleNotificationChime(forceSound);
     showToast(title, bodyText, 'emerald');
 
     if ('Notification' in window && Notification.permission === 'granted') {
         try {
-            new Notification(`BakVakitGeldi — ${title}`, {
-                body: bodyText,
-                tag: `bakvakitgeldi-${Date.now()}`
-            });
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then((reg) => {
+                    reg.showNotification(`BakVakitGeldi — ${title}`, {
+                        body: bodyText,
+                        icon: 'icon.svg',
+                        badge: 'icon.svg',
+                        tag: `bakvakitgeldi-${Date.now()}`
+                    });
+                }).catch(() => {
+                    new Notification(`BakVakitGeldi — ${title}`, {
+                        body: bodyText,
+                        icon: 'icon.svg',
+                        tag: `bakvakitgeldi-${Date.now()}`
+                    });
+                });
+            } else {
+                new Notification(`BakVakitGeldi — ${title}`, {
+                    body: bodyText,
+                    icon: 'icon.svg',
+                    tag: `bakvakitgeldi-${Date.now()}`
+                });
+            }
         } catch (e) {
             // Mobil tarayıcı kısıtlaması varsa toast zaten gösterildi
         }
@@ -831,13 +938,16 @@ function renderNotificationUI() {
     const dot = document.getElementById('notifActiveDot');
     const cardBtn = document.getElementById('notifCardToggleBtn');
     const subtext = document.getElementById('notifCardSubtext');
+    const soundBtn = document.getElementById('soundToggleBtn');
+    const soundText = document.getElementById('soundToggleText');
+    const toneSelect = document.getElementById('soundToneSelect');
     const cityObj = getCityById(state.selectedCity);
 
     if (state.notificationsEnabled) {
         dot?.classList.remove('hidden');
         if (cardBtn) {
-            cardBtn.textContent = 'Açık ✓';
-            cardBtn.className = 'px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition';
+            cardBtn.textContent = 'Bildirim: Açık ✓';
+            cardBtn.className = 'px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shrink-0';
         }
         if (subtext) {
             subtext.textContent = `${cityObj.name} vakitleri için bildirimler aktif.`;
@@ -846,11 +956,25 @@ function renderNotificationUI() {
         dot?.classList.add('hidden');
         if (cardBtn) {
             cardBtn.textContent = 'Bildirimleri Aç';
-            cardBtn.className = 'px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-emerald-600 hover:text-white dark:bg-slate-800 dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition';
+            cardBtn.className = 'px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-emerald-600 hover:text-white dark:bg-slate-800 dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition shrink-0';
         }
         if (subtext) {
-            subtext.textContent = 'Vakit girdiğinde anında tarayıcı bildirimi alın.';
+            subtext.textContent = 'Vakit girdiğinde bildirim ve zarif ses uyarısı alın.';
         }
+    }
+
+    if (soundBtn && soundText) {
+        if (state.soundEnabled) {
+            soundText.textContent = 'Ses: Açık';
+            soundBtn.className = 'px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-xs font-semibold flex items-center gap-1.5 transition';
+        } else {
+            soundText.textContent = 'Ses: Kapalı';
+            soundBtn.className = 'px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition';
+        }
+    }
+
+    if (toneSelect && toneSelect.value !== state.soundTone) {
+        toneSelect.value = state.soundTone;
     }
 }
 
@@ -909,6 +1033,14 @@ function loadFromStorage() {
 
         const savedNotif = localStorage.getItem(STORAGE_KEYS.NOTIF_ENABLED);
         state.notificationsEnabled = savedNotif === '1';
+
+        const savedSound = localStorage.getItem(STORAGE_KEYS.SOUND_ENABLED);
+        state.soundEnabled = savedSound === null ? true : savedSound === '1';
+
+        const savedTone = localStorage.getItem(STORAGE_KEYS.SOUND_TONE);
+        if (savedTone && ['huzur', 'kristal', 'ney'].includes(savedTone)) {
+            state.soundTone = savedTone;
+        }
 
         const savedNotifLog = localStorage.getItem(STORAGE_KEYS.NOTIFIED_LOG);
         if (savedNotifLog) {
@@ -1678,6 +1810,10 @@ function togglePrayerStatus(prayerId) {
         record.mode[prayerId] = 'eda';
     }
 
+    if (record.prayers[prayerId]) {
+        playSoftCheckSound();
+    }
+
     saveDailyRecords(true);
     renderCalendarSection();
     renderProgressBar();
@@ -1692,6 +1828,92 @@ function togglePrayerMode(prayerId) {
     record.mode[prayerId] = record.mode[prayerId] === 'kaza' ? 'eda' : 'kaza';
     saveDailyRecords(true);
     renderPrayerList(prayerId);
+}
+
+// ============================================================================
+// 5. PWA (ANA EKRANA EKLEME) & SERVICE WORKER YÖNETİMİ
+// ============================================================================
+
+let deferredInstallPrompt = null;
+
+function isRunningStandalone() {
+    return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true
+    );
+}
+
+function initPWA() {
+    const banner = document.getElementById('pwaInstallBanner');
+    const headerBtn = document.getElementById('headerInstallBtn');
+    const bannerSubtext = document.getElementById('pwaBannerSubtext');
+
+    // Service Worker Kaydı
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => null);
+    }
+
+    // Zaten uygulama olarak (Ana Ekrandan) açıldıysa kurulum çubuğunu gizle
+    if (isRunningStandalone()) {
+        banner?.classList.add('hidden');
+        headerBtn?.classList.add('hidden');
+        return;
+    }
+
+    // Kullanıcı daha önce çubuğu kapattıysa gizle (üst bardaki buton kalır)
+    if (localStorage.getItem(STORAGE_KEYS.PWA_BANNER_DISMISSED) === '1') {
+        banner?.classList.add('hidden');
+    }
+
+    // iOS Safari kontrolü (kullanıcıya özel bilgi metni)
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    if (isIos && bannerSubtext) {
+        bannerSubtext.textContent = 'Safari\'de Paylaş butonuna basıp "Ana Ekrana Ekle" seçeneğiyle uygulama olarak kurun.';
+    }
+
+    // Chrome / Android / Edge yerel kurulum istemini yakala
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        if (localStorage.getItem(STORAGE_KEYS.PWA_BANNER_DISMISSED) !== '1') {
+            banner?.classList.remove('hidden');
+        }
+        headerBtn?.classList.remove('hidden');
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        banner?.classList.add('hidden');
+        headerBtn?.classList.add('hidden');
+        showToast('BakVakitGeldi Kuruldu!', 'Uygulama ana ekranınıza başarıyla eklendi.', 'emerald');
+    });
+}
+
+async function triggerPwaInstall() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+            deferredInstallPrompt = null;
+            document.getElementById('pwaInstallBanner')?.classList.add('hidden');
+        }
+        return;
+    }
+
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    if (isIos) {
+        showToast(
+            'iPhone / iPad Ana Ekrana Ekleme',
+            'Safari alt menüsündeki Paylaş [↑] simgesine dokunun ve "Ana Ekrana Ekle" seçeneğini seçin.',
+            'emerald'
+        );
+    } else {
+        showToast(
+            'Ana Ekrana Ekleme',
+            'Tarayıcınızın sağ üst menüsünden (⋮) "Ana ekrana ekle" veya "Uygulamayı yükle" seçeneğine dokunun.',
+            'emerald'
+        );
+    }
 }
 
 // Sekme Değiştirici (5 Vakit | Kaza | Kıble Pusulası)
@@ -1748,6 +1970,14 @@ function setupEventListeners() {
     // Tema Değiştirici
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
+    // PWA Ana Ekrana Ekle Butonları
+    document.getElementById('pwaInstallActionBtn')?.addEventListener('click', triggerPwaInstall);
+    document.getElementById('headerInstallBtn')?.addEventListener('click', triggerPwaInstall);
+    document.getElementById('pwaBannerCloseBtn')?.addEventListener('click', () => {
+        document.getElementById('pwaInstallBanner')?.classList.add('hidden');
+        localStorage.setItem(STORAGE_KEYS.PWA_BANNER_DISMISSED, '1');
+    });
+
     // 81 İl Seçici
     document.getElementById('citySelect').addEventListener('change', (e) => {
         if (e.target.value) {
@@ -1760,14 +1990,21 @@ function setupEventListeners() {
         syncPrayerTimings(true);
     });
 
-    // Bildirim Aç / Kapat & Test Butonları
+    // Bildirim Aç / Kapat, Ses Efekti & Test Butonları
     document.getElementById('notificationToggleBtn').addEventListener('click', toggleNotifications);
     document.getElementById('notifCardToggleBtn').addEventListener('click', toggleNotifications);
+    document.getElementById('soundToggleBtn')?.addEventListener('click', toggleSoundEnabled);
+    document.getElementById('soundToneSelect')?.addEventListener('change', (e) => {
+        if (e.target.value) {
+            setSoundTone(e.target.value);
+        }
+    });
     document.getElementById('testNotificationBtn').addEventListener('click', () => {
         const cityObj = getCityById(state.selectedCity);
         sendEzanNotification(
             'Örnek Vakit Bildirimi!',
-            `${cityObj.name} için ezan vakti girdiğinde bildirimleriniz bu şekilde görünecektir.`
+            `${cityObj.name} için ezan vakti girdiğinde bildirim ve seçtiğiniz zarif ses efekti bu şekilde çalacaktır.`,
+            true
         );
     });
 
@@ -1834,6 +2071,7 @@ function setupEventListeners() {
             if (!record.mode) record.mode = {};
             if (!record.mode[p.id]) record.mode[p.id] = 'eda';
         });
+        playSoftCheckSound();
         saveDailyRecords(true);
         renderAll();
     });
@@ -1917,6 +2155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFromStorage();
     initCitySelect();
     updateQiblaForSelectedCity();
+    initPWA();
     setupEventListeners();
     renderAll();
     updateLiveClockAndCountdown();
