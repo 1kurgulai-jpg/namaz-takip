@@ -11,8 +11,29 @@
     }
 }
 
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 .prayer-card-completed {
     animation: pulseSuccess 0.3s ease-out;
+}
+
+.toast-enter {
+    animation: slideInUp 0.25s ease-out forwards;
+}
+
+/* Kıble Pusulası Hizalanma Parlaması */
+.qibla-aligned-ring {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.35), inset 0 0 20px rgba(16, 185, 129, 0.15) !important;
 }
 
 /* Tarih seçici ikon uyumu */

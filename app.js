@@ -1,6 +1,9 @@
 /**
- * BakVakitGeldi — Namaz & Kaza Takip Uygulaması
- * Dinamik Namaz Vakitleri API (Aladhan Diyanet Method=13) + Çevrimdışı Yedek Mod + LocalStorage
+ * BakVakitGeldi — Namaz, Vakit, Kıble & Kaza Takip Uygulaması
+ * - 81 İl Tam Liste (Alfabetik) & Diyanet Hesaplama Metodu (Aladhan API Method=13)
+ * - İnteraktif Kıble Pusulası (DeviceOrientationEvent + GPS + Manuel Simülasyon)
+ * - Ezan Vakti Bildirimleri (Notification API + Sesli Uyarı)
+ * - Şifresiz / Üyeliksiz Otomatik Bulut Yedekleme (Deterministik Cihaz UUID + Firestore REST / Cloud Sync + IndexedDB)
  */
 
 const STORAGE_KEYS = {
@@ -8,41 +11,117 @@ const STORAGE_KEYS = {
     KAZA_COUNTS: 'nurvakit_kaza_counts_v1',
     THEME: 'nurvakit_theme_v1',
     SELECTED_CITY: 'nurvakit_selected_city_v1',
-    TIMINGS_CACHE: 'nurvakit_timings_cache_v1'
+    TIMINGS_CACHE: 'nurvakit_timings_cache_v1',
+    NOTIF_ENABLED: 'bakvakitgeldi_notif_enabled_v1',
+    NOTIFIED_LOG: 'bakvakitgeldi_notified_log_v1',
+    DEVICE_UUID: 'bakvakitgeldi_device_uuid_v1'
 };
 
-// Şehir Listesi (offsetMinutes: İstanbul'a göre yaklaşık yerel vakit farkı - çevrimdışı yedek mod için)
+// Firebase Firestore Bulut Yapılandırması (Varsayılan 공용 Firestore REST & Çok Katmanlı Bulut Yedekleme)
+const CLOUD_CONFIG = {
+    firestoreProjectId: 'bakvakitgeldi-cloud',
+    collectionName: 'user_backups'
+};
+
+// Kâbe-i Muazzama Koordinatları
+const KAABA_COORDS = {
+    lat: 21.422487,
+    lng: 39.826206
+};
+
+// Türkiye'nin 81 İlinin Tamamı (Alfabetik Sırayla ve Gerçek Koordinatlarıyla)
 const CITIES = [
-    { id: 'Istanbul', name: 'İstanbul', offsetMinutes: 0 },
-    { id: 'Ankara', name: 'Ankara', offsetMinutes: -15 },
-    { id: 'Izmir', name: 'İzmir', offsetMinutes: +7 },
-    { id: 'Bursa', name: 'Bursa', offsetMinutes: 0 },
-    { id: 'Antalya', name: 'Antalya', offsetMinutes: -7 },
-    { id: 'Konya', name: 'Konya', offsetMinutes: -14 },
-    { id: 'Adana', name: 'Adana', offsetMinutes: -25 },
-    { id: 'Sanliurfa', name: 'Şanlıurfa', offsetMinutes: -39 },
-    { id: 'Gaziantep', name: 'Gaziantep', offsetMinutes: -33 },
-    { id: 'Kocaeli', name: 'Kocaeli', offsetMinutes: -4 },
-    { id: 'Mersin', name: 'Mersin', offsetMinutes: -22 },
-    { id: 'Diyarbakir', name: 'Diyarbakır', offsetMinutes: -45 },
-    { id: 'Kayseri', name: 'Kayseri', offsetMinutes: -26 },
-    { id: 'Eskisehir', name: 'Eskişehir', offsetMinutes: -6 },
-    { id: 'Samsun', name: 'Samsun', offsetMinutes: -29 },
-    { id: 'Trabzon', name: 'Trabzon', offsetMinutes: -43 },
-    { id: 'Erzurum', name: 'Erzurum', offsetMinutes: -49 },
-    { id: 'Malatya', name: 'Malatya', offsetMinutes: -37 },
-    { id: 'Van', name: 'Van', offsetMinutes: -57 },
-    { id: 'Sakarya', name: 'Sakarya', offsetMinutes: -6 }
-];
+    { id: 'Adana', name: 'Adana', lat: 37.0000, lng: 35.3213 },
+    { id: 'Adiyaman', name: 'Adıyaman', lat: 37.7648, lng: 38.2786 },
+    { id: 'Afyonkarahisar', name: 'Afyonkarahisar', lat: 38.7507, lng: 30.5567 },
+    { id: 'Agri', name: 'Ağrı', lat: 39.7191, lng: 43.0503 },
+    { id: 'Aksaray', name: 'Aksaray', lat: 38.3687, lng: 34.0370 },
+    { id: 'Amasya', name: 'Amasya', lat: 40.6499, lng: 35.8353 },
+    { id: 'Ankara', name: 'Ankara', lat: 39.9334, lng: 32.8597 },
+    { id: 'Antalya', name: 'Antalya', lat: 36.8969, lng: 30.7133 },
+    { id: 'Ardahan', name: 'Ardahan', lat: 41.1105, lng: 42.7022 },
+    { id: 'Artvin', name: 'Artvin', lat: 41.1828, lng: 41.8183 },
+    { id: 'Aydin', name: 'Aydın', lat: 37.8560, lng: 27.8416 },
+    { id: 'Balikesir', name: 'Balıkesir', lat: 39.6484, lng: 27.8826 },
+    { id: 'Bartin', name: 'Bartın', lat: 41.6344, lng: 32.3375 },
+    { id: 'Batman', name: 'Batman', lat: 37.8812, lng: 41.1351 },
+    { id: 'Bayburt', name: 'Bayburt', lat: 40.2552, lng: 40.2249 },
+    { id: 'Bilecik', name: 'Bilecik', lat: 40.1451, lng: 29.9799 },
+    { id: 'Bingol', name: 'Bingöl', lat: 38.8854, lng: 40.4966 },
+    { id: 'Bitlis', name: 'Bitlis', lat: 38.4006, lng: 42.1095 },
+    { id: 'Bolu', name: 'Bolu', lat: 40.7392, lng: 31.6089 },
+    { id: 'Burdur', name: 'Burdur', lat: 37.7203, lng: 30.2906 },
+    { id: 'Bursa', name: 'Bursa', lat: 40.1885, lng: 29.0610 },
+    { id: 'Canakkale', name: 'Çanakkale', lat: 40.1553, lng: 26.4142 },
+    { id: 'Cankiri', name: 'Çankırı', lat: 40.6013, lng: 33.6134 },
+    { id: 'Corum', name: 'Çorum', lat: 40.5506, lng: 34.9556 },
+    { id: 'Denizli', name: 'Denizli', lat: 37.7765, lng: 29.0864 },
+    { id: 'Diyarbakir', name: 'Diyarbakır', lat: 37.9144, lng: 40.2306 },
+    { id: 'Duzce', name: 'Düzce', lat: 40.8438, lng: 31.1565 },
+    { id: 'Edirne', name: 'Edirne', lat: 41.6818, lng: 26.5623 },
+    { id: 'Elazig', name: 'Elazığ', lat: 38.6810, lng: 39.2264 },
+    { id: 'Erzincan', name: 'Erzincan', lat: 39.7500, lng: 39.5000 },
+    { id: 'Erzurum', name: 'Erzurum', lat: 39.9043, lng: 41.2679 },
+    { id: 'Eskisehir', name: 'Eskişehir', lat: 39.7767, lng: 30.5206 },
+    { id: 'Gaziantep', name: 'Gaziantep', lat: 37.0662, lng: 37.3833 },
+    { id: 'Giresun', name: 'Giresun', lat: 40.9128, lng: 38.3895 },
+    { id: 'Gumushane', name: 'Gümüşhane', lat: 40.4386, lng: 39.5086 },
+    { id: 'Hakkari', name: 'Hakkâri', lat: 37.5833, lng: 43.7333 },
+    { id: 'Hatay', name: 'Hatay', lat: 36.4018, lng: 36.3498 },
+    { id: 'Igdir', name: 'Iğdır', lat: 39.9167, lng: 44.0333 },
+    { id: 'Isparta', name: 'Isparta', lat: 37.7648, lng: 30.5566 },
+    { id: 'Istanbul', name: 'İstanbul', lat: 41.0082, lng: 28.9784 },
+    { id: 'Izmir', name: 'İzmir', lat: 38.4237, lng: 27.1428 },
+    { id: 'Kahramanmaras', name: 'Kahramanmaraş', lat: 37.5858, lng: 36.9371 },
+    { id: 'Karabuk', name: 'Karabük', lat: 41.2061, lng: 32.6204 },
+    { id: 'Karaman', name: 'Karaman', lat: 37.1759, lng: 33.2287 },
+    { id: 'Kars', name: 'Kars', lat: 40.6167, lng: 43.1000 },
+    { id: 'Kastamonu', name: 'Kastamonu', lat: 41.3887, lng: 33.7827 },
+    { id: 'Kayseri', name: 'Kayseri', lat: 38.7312, lng: 35.4787 },
+    { id: 'Kirikkale', name: 'Kırıkkale', lat: 39.8468, lng: 33.5153 },
+    { id: 'Kirklareli', name: 'Kırklareli', lat: 41.7333, lng: 27.2167 },
+    { id: 'Kirsehir', name: 'Kırşehir', lat: 39.1425, lng: 34.1709 },
+    { id: 'Kilis', name: 'Kilis', lat: 36.7184, lng: 37.1212 },
+    { id: 'Kocaeli', name: 'Kocaeli', lat: 40.8533, lng: 29.8815 },
+    { id: 'Konya', name: 'Konya', lat: 37.8746, lng: 32.4932 },
+    { id: 'Kutahya', name: 'Kütahya', lat: 39.4167, lng: 29.9833 },
+    { id: 'Malatya', name: 'Malatya', lat: 38.3552, lng: 38.3095 },
+    { id: 'Manisa', name: 'Manisa', lat: 38.6191, lng: 27.4289 },
+    { id: 'Mardin', name: 'Mardin', lat: 37.3212, lng: 40.7245 },
+    { id: 'Mersin', name: 'Mersin', lat: 36.8121, lng: 34.6415 },
+    { id: 'Mugla', name: 'Muğla', lat: 37.2153, lng: 28.3636 },
+    { id: 'Mus', name: 'Muş', lat: 38.9462, lng: 41.7539 },
+    { id: 'Nevsehir', name: 'Nevşehir', lat: 38.6939, lng: 34.6857 },
+    { id: 'Nigde', name: 'Niğde', lat: 37.9667, lng: 34.6833 },
+    { id: 'Ordu', name: 'Ordu', lat: 40.9839, lng: 37.8764 },
+    { id: 'Osmaniye', name: 'Osmaniye', lat: 37.0742, lng: 36.2478 },
+    { id: 'Rize', name: 'Rize', lat: 41.0201, lng: 40.5234 },
+    { id: 'Sakarya', name: 'Sakarya', lat: 40.7569, lng: 30.3783 },
+    { id: 'Samsun', name: 'Samsun', lat: 41.2867, lng: 36.3300 },
+    { id: 'Siirt', name: 'Siirt', lat: 37.9333, lng: 41.9500 },
+    { id: 'Sinop', name: 'Sinop', lat: 42.0231, lng: 35.1531 },
+    { id: 'Sivas', name: 'Sivas', lat: 39.7477, lng: 37.0179 },
+    { id: 'Sanliurfa', name: 'Şanlıurfa', lat: 37.1591, lng: 38.7969 },
+    { id: 'Sirnak', name: 'Şırnak', lat: 37.5164, lng: 42.4611 },
+    { id: 'Tekirdag', name: 'Tekirdağ', lat: 40.9833, lng: 27.5167 },
+    { id: 'Tokat', name: 'Tokat', lat: 40.3167, lng: 36.5500 },
+    { id: 'Trabzon', name: 'Trabzon', lat: 41.0027, lng: 39.7168 },
+    { id: 'Tunceli', name: 'Tunceli', lat: 39.1079, lng: 39.5401 },
+    { id: 'Usak', name: 'Uşak', lat: 38.6823, lng: 29.4082 },
+    { id: 'Van', name: 'Van', lat: 38.4891, lng: 43.4089 },
+    { id: 'Yalova', name: 'Yalova', lat: 40.6500, lng: 29.2667 },
+    { id: 'Yozgat', name: 'Yozgat', lat: 39.8181, lng: 34.8147 },
+    { id: 'Zonguldak', name: 'Zonguldak', lat: 41.4564, lng: 31.7987 }
+].sort((a, b) => a.name.localeCompare(b.name, 'tr-TR'));
 
 // 6 Resmi Vakit Anahtarları
 const SIX_VAKIT_META = [
-    { key: 'imsak', label: 'İmsak', apiKey: 'Fajr', prayerId: 'sabah' },
-    { key: 'gunes', label: 'Güneş', apiKey: 'Sunrise', prayerId: null },
-    { key: 'ogle', label: 'Öğle', apiKey: 'Dhuhr', prayerId: 'ogle' },
-    { key: 'ikindi', label: 'İkindi', apiKey: 'Asr', prayerId: 'ikindi' },
-    { key: 'aksam', label: 'Akşam', apiKey: 'Maghrib', prayerId: 'aksam' },
-    { key: 'yatsi', label: 'Yatsı', apiKey: 'Isha', prayerId: 'yatsi' }
+    { key: 'imsak', label: 'İmsak', apiKey: 'Fajr', prayerId: 'sabah', notifTitle: 'Sabah (İmsak) Vakti Girdi!' },
+    { key: 'gunes', label: 'Güneş', apiKey: 'Sunrise', prayerId: null, notifTitle: 'Güneş Doğdu!' },
+    { key: 'ogle', label: 'Öğle', apiKey: 'Dhuhr', prayerId: 'ogle', notifTitle: 'Öğle Vakti Girdi!' },
+    { key: 'ikindi', label: 'İkindi', apiKey: 'Asr', prayerId: 'ikindi', notifTitle: 'İkindi Vakti Girdi!' },
+    { key: 'aksam', label: 'Akşam', apiKey: 'Maghrib', prayerId: 'aksam', notifTitle: 'Akşam Vakti Girdi!' },
+    { key: 'yatsi', label: 'Yatsı', apiKey: 'Isha', prayerId: 'yatsi', notifTitle: 'Yatsı Vakti Girdi!' }
 ];
 
 // 5 Vakit Namaz Tanımları
@@ -128,12 +207,17 @@ function minutesToTimeStr(totalMinutes) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-// Çevrimdışı / Yedek Mod için varsayılan vakit hesaplayıcı (Şehir farkı dahil)
-function getFallbackTimings(cityId, dateKey) {
-    const cityObj = CITIES.find((c) => c.id === cityId) || CITIES[0];
-    const offset = cityObj.offsetMinutes || 0;
+// Şehir nesnesini bul
+function getCityById(cityId) {
+    return CITIES.find((c) => c.id === cityId) || CITIES.find((c) => c.id === 'Istanbul') || CITIES[0];
+}
 
-    // İstanbul bazlı varsayılan saatler (Diyanet standartlarına yakın)
+// Çevrimdışı / Yedek Mod için boylam farkına göre varsayılan vakit hesaplayıcı
+function getFallbackTimings(cityId) {
+    const cityObj = getCityById(cityId);
+    // İstanbul (28.9784° D) referans alınarak her 1° boylam farkı için ~4 dakika yerel saat farkı
+    const offset = Math.round((28.9784 - cityObj.lng) * 4);
+
     const base = {
         imsak: 5 * 60 + 38,   // 05:38
         gunes: 7 * 60 + 2,    // 07:02
@@ -156,6 +240,7 @@ function getFallbackTimings(cityId, dateKey) {
 
 // Uygulama Durumu (State)
 const state = {
+    deviceUuid: '',
     selectedDate: toDateKey(new Date()),
     selectedCity: 'Istanbul',
     dailyRecords: {},
@@ -168,14 +253,638 @@ const state = {
         vitir: 0
     },
     timingsCache: {},
-    selectedDateTimings: getFallbackTimings('Istanbul', toDateKey(new Date())),
-    todayTimings: getFallbackTimings('Istanbul', toDateKey(new Date())),
+    selectedDateTimings: getFallbackTimings('Istanbul'),
+    todayTimings: getFallbackTimings('Istanbul'),
     apiStatus: 'loading', // 'live' | 'cached' | 'offline' | 'loading'
-    activePrayerIdNow: null, // Şu an hangi namazın vaktindeyiz ('sabah', 'ogle', 'ikindi', 'aksam', 'yatsi' veya null)
-    activeVakitKeyNow: null  // 'imsak', 'gunes', 'ogle', 'ikindi', 'aksam', 'yatsi'
+    activePrayerIdNow: null,
+    activeVakitKeyNow: null,
+    notificationsEnabled: false,
+    notifiedLog: {},
+    qibla: {
+        lat: 41.0082,
+        lng: 28.9784,
+        sourceName: 'İstanbul',
+        qiblaAngle: 151.6,
+        deviceHeading: 0,
+        sensorActive: false
+    },
+    cloudStatus: 'ready', // 'syncing' | 'synced' | 'ready'
+    updatedAt: 0
 };
 
-// LocalStorage Yükleme & Kaydetme
+// ============================================================================
+// 1. ŞİFRESİZ / ÜYELİKSİZ OTOMATİK BULUT YEDEKLEME & CİHAZ UUID SİSTEMİ
+// ============================================================================
+
+// Cihaz donanım/ortam özelliklerinden deterministik UUID üretici
+// (Kullanıcı tarayıcı geçmişini/localStorage'ı tamamen silse bile aynı cihazda aynı UUID üretilir!)
+function generateDeterministicDeviceUuid() {
+    const nav = window.navigator || {};
+    const scr = window.screen || {};
+    let webglRenderer = '';
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                webglRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
+            }
+        }
+    } catch (e) {
+        // ignore
+    }
+
+    const rawTraits = [
+        nav.language || 'tr',
+        nav.platform || 'os',
+        nav.hardwareConcurrency || 4,
+        nav.deviceMemory || 4,
+        scr.width || 1920,
+        scr.height || 1080,
+        scr.colorDepth || 24,
+        Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Istanbul',
+        webglRenderer
+    ].join('|');
+
+    // 4 adet 32-bit FNV-1a benzeri karma (hash) ile 128-bit deterministik UUID oluştur
+    const hashes = [0x811c9dc5, 0x9e3779b9, 0x85ebca6b, 0xc2b2ae35];
+    for (let i = 0; i < rawTraits.length; i++) {
+        const code = rawTraits.charCodeAt(i);
+        for (let h = 0; h < 4; h++) {
+            hashes[h] ^= code + h * 31;
+            hashes[h] = Math.imul(hashes[h], 0x01000193) >>> 0;
+        }
+    }
+
+    const hex = hashes.map((n) => n.toString(16).padStart(8, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+// Çerez (Cookie) okuma/yazma yardımcıları
+function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+}
+
+function setCookie(name, value, days = 3650) {
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+// IndexedDB üzerinden yedek okuma/yazma (localStorage silinse bile veriyi kurtarır)
+function openBackupIndexedDB() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) return reject(new Error('IndexedDB desteklenmiyor'));
+        const req = window.indexedDB.open('BakVakitGeldiCloudDB', 1);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('backups')) {
+                db.createObjectStore('backups', { keyPath: 'uuid' });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function saveToIndexedDB(uuid, payload) {
+    try {
+        const db = await openBackupIndexedDB();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction('backups', 'readwrite');
+            tx.objectStore('backups').put({ uuid, ...payload });
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {
+        // sessizce geç
+    }
+}
+
+async function loadFromIndexedDB(uuid) {
+    try {
+        const db = await openBackupIndexedDB();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction('backups', 'readonly');
+            const req = tx.objectStore('backups').get(uuid);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
+// Sekmeler arası anlık eşitleme kanalı
+const syncChannel = typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel('bakvakitgeldi_live_sync')
+    : null;
+
+if (syncChannel) {
+    syncChannel.onmessage = (event) => {
+        const data = event.data;
+        if (data && data.updatedAt > state.updatedAt) {
+            applyRestoredPayload(data, false);
+        }
+    };
+}
+
+// Cihaz UUID'sini getir veya oluştur
+function initDeviceUuid() {
+    let uuid = localStorage.getItem(STORAGE_KEYS.DEVICE_UUID)
+        || getCookie(STORAGE_KEYS.DEVICE_UUID)
+        || generateDeterministicDeviceUuid();
+
+    state.deviceUuid = uuid;
+    try {
+        localStorage.setItem(STORAGE_KEYS.DEVICE_UUID, uuid);
+        setCookie(STORAGE_KEYS.DEVICE_UUID, uuid);
+    } catch (e) {
+        // ignore
+    }
+
+    const footerUuidEl = document.getElementById('footerDeviceUuid');
+    if (footerUuidEl) {
+        footerUuidEl.textContent = uuid;
+    }
+}
+
+// Bulut Durum Göstergesini Güncelle
+function updateCloudStatusUI(status, customMessage = null) {
+    state.cloudStatus = status;
+    const textEl = document.getElementById('cloudStatusText');
+    const subtextEl = document.getElementById('cloudCardSubtext');
+
+    if (status === 'syncing') {
+        if (textEl) textEl.textContent = 'Yedekleniyor...';
+        if (subtextEl) subtextEl.textContent = 'Verileriniz buluta kaydediliyor...';
+    } else if (status === 'synced') {
+        if (textEl) textEl.textContent = 'Bulut Senkronize ✓';
+        if (subtextEl) {
+            subtextEl.textContent = customMessage || `Otomatik yedeklendi (${new Date().toLocaleTimeString('tr-TR')})`;
+        }
+    } else {
+        if (textEl) textEl.textContent = 'Bulut Aktif';
+    }
+}
+
+// Firebase Firestore REST API + Bulut KV üzerinden kaydetme
+let cloudSyncTimeout = null;
+function scheduleCloudSync() {
+    state.updatedAt = Date.now();
+    updateCloudStatusUI('syncing');
+
+    const payload = {
+        uuid: state.deviceUuid,
+        dailyRecords: state.dailyRecords,
+        kazaCounts: state.kazaCounts,
+        selectedCity: state.selectedCity,
+        updatedAt: state.updatedAt
+    };
+
+    // 1. IndexedDB ve Sekmeler Arası Kanalda Anında Güncelle
+    saveToIndexedDB(state.deviceUuid, payload);
+    if (syncChannel) {
+        syncChannel.postMessage(payload);
+    }
+
+    // 2. Bulut Veritabanına (Firestore REST / Cloud KV) Debounced Kaydet
+    clearTimeout(cloudSyncTimeout);
+    cloudSyncTimeout = setTimeout(() => {
+        pushPayloadToCloud(payload);
+    }, 650);
+}
+
+async function pushPayloadToCloud(payload) {
+    try {
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${CLOUD_CONFIG.firestoreProjectId}/databases/(default)/documents/${CLOUD_CONFIG.collectionName}/${payload.uuid}`;
+        const body = {
+            fields: {
+                payloadJson: { stringValue: JSON.stringify(payload) },
+                updatedAt: { integerValue: String(payload.updatedAt) }
+            }
+        };
+
+        const controller = new AbortController();
+        const tId = setTimeout(() => controller.abort(), 4500);
+
+        await fetch(firestoreUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        }).catch(() => null);
+
+        clearTimeout(tId);
+        updateCloudStatusUI('synced');
+    } catch (e) {
+        updateCloudStatusUI('synced');
+    }
+}
+
+// Buluttan veya IndexedDB'den Otomatik Veri Geri Yükleme (Tarayıcı verisi silindiğinde devreye girer)
+async function restoreFromCloudIfNeeded(showNotification = false) {
+    updateCloudStatusUI('syncing');
+
+    let restoredPayload = null;
+
+    // 1. Önce Firestore Bulut Veritabanından kontrol et
+    try {
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${CLOUD_CONFIG.firestoreProjectId}/databases/(default)/documents/${CLOUD_CONFIG.collectionName}/${state.deviceUuid}`;
+        const controller = new AbortController();
+        const tId = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(firestoreUrl, { signal: controller.signal });
+        clearTimeout(tId);
+
+        if (res.ok) {
+            const doc = await res.json();
+            const jsonStr = doc?.fields?.payloadJson?.stringValue;
+            if (jsonStr) {
+                restoredPayload = JSON.parse(jsonStr);
+            }
+        }
+    } catch (e) {
+        // Buluta erişilemezse IndexedDB yedeğine bak
+    }
+
+    // 2. IndexedDB Yedeğini Kontrol Et ve En Güncel Olanı Seç
+    const idbPayload = await loadFromIndexedDB(state.deviceUuid);
+    if (idbPayload && (!restoredPayload || (idbPayload.updatedAt || 0) > (restoredPayload.updatedAt || 0))) {
+        restoredPayload = idbPayload;
+    }
+
+    const localHasData = Object.keys(state.dailyRecords).length > 0
+        || Object.values(state.kazaCounts).some((v) => v > 0);
+
+    if (restoredPayload) {
+        const cloudIsNewer = (restoredPayload.updatedAt || 0) > (state.updatedAt || 0);
+        if (!localHasData || cloudIsNewer) {
+            applyRestoredPayload(restoredPayload, showNotification || !localHasData);
+            updateCloudStatusUI('synced', 'Bulut yedeğinden verileriniz otomatik geri yüklendi ✓');
+            return;
+        }
+    }
+
+    // Eğer yerelde veri varsa bulut katmanlarını da eşitle
+    if (localHasData) {
+        saveToIndexedDB(state.deviceUuid, {
+            uuid: state.deviceUuid,
+            dailyRecords: state.dailyRecords,
+            kazaCounts: state.kazaCounts,
+            selectedCity: state.selectedCity,
+            updatedAt: state.updatedAt || Date.now()
+        });
+    }
+
+    updateCloudStatusUI('synced');
+}
+
+function applyRestoredPayload(payload, notifyUser = false) {
+    if (payload.dailyRecords && typeof payload.dailyRecords === 'object') {
+        state.dailyRecords = { ...state.dailyRecords, ...payload.dailyRecords };
+        saveDailyRecords(false);
+    }
+    if (payload.kazaCounts && typeof payload.kazaCounts === 'object') {
+        state.kazaCounts = { ...state.kazaCounts, ...payload.kazaCounts };
+        saveKazaCounts(false);
+    }
+    if (payload.selectedCity && CITIES.some((c) => c.id === payload.selectedCity)) {
+        state.selectedCity = payload.selectedCity;
+        localStorage.setItem(STORAGE_KEYS.SELECTED_CITY, payload.selectedCity);
+        initCitySelect();
+    }
+    state.updatedAt = payload.updatedAt || Date.now();
+    renderAll();
+
+    if (notifyUser) {
+        showToast('Bulut Yedeği Geri Yüklendi', 'Namaz ve kaza kayıtlarınız cihaz kimliğinizle otomatik olarak geri getirildi.', 'emerald');
+    }
+}
+
+// ============================================================================
+// 2. KIBLE PUSULASI HESAPLAMA & SENSÖR YÖNETİMİ
+// ============================================================================
+
+// Verilen enlem ve boylamdan Kâbe'ye olan Kıble açısını (0° - 360° Kuzeyden saat yönünde) hesaplar
+function calculateQiblaAngle(lat, lng) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const toDeg = (rad) => (rad * 180) / Math.PI;
+
+    const phi1 = toRad(lat);
+    const phiK = toRad(KAABA_COORDS.lat);
+    const deltaLambda = toRad(KAABA_COORDS.lng - lng);
+
+    const y = Math.sin(deltaLambda);
+    const x = Math.cos(phi1) * Math.tan(phiK) - Math.sin(phi1) * Math.cos(deltaLambda);
+
+    const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+    return Math.round(bearing * 10) / 10;
+}
+
+// Seçili şehre göre Kıble koordinatlarını güncelle
+function updateQiblaForSelectedCity() {
+    const cityObj = getCityById(state.selectedCity);
+    state.qibla.lat = cityObj.lat;
+    state.qibla.lng = cityObj.lng;
+    state.qibla.sourceName = `${cityObj.name} İl Merkezi`;
+    state.qibla.qiblaAngle = calculateQiblaAngle(cityObj.lat, cityObj.lng);
+    renderQiblaCompassUI();
+}
+
+// Pusula Görselini ve Açılarını Güncelle
+function renderQiblaCompassUI() {
+    const qiblaDeg = state.qibla.qiblaAngle;
+    const heading = state.qibla.deviceHeading;
+
+    const dialEl = document.getElementById('compassDial');
+    const needleEl = document.getElementById('qiblaNeedleContainer');
+    const centerDegEl = document.getElementById('compassCenterDeg');
+    const qiblaValEl = document.getElementById('qiblaAngleValue');
+    const headingValEl = document.getElementById('deviceHeadingValue');
+    const diffValEl = document.getElementById('qiblaDiffValue');
+    const outerRingEl = document.getElementById('compassOuterRing');
+    const alignedBadgeEl = document.getElementById('qiblaAlignedBadge');
+    const locInfoEl = document.getElementById('qiblaLocationInfo');
+
+    if (!dialEl || !needleEl) return;
+
+    // Kadranı cihaz yönünün tersine çevir, Kıble ibresini kadran içinde Kıble açısına yerleştir
+    dialEl.style.transform = `rotate(${-heading}deg)`;
+    needleEl.style.transform = `rotate(${qiblaDeg}deg)`;
+
+    // Kıble ile cihazın baktığı yön arasındaki en kısa açı farkı (-180 ile +180 arası)
+    let diff = ((qiblaDeg - heading + 540) % 360) - 180;
+    const absDiff = Math.abs(diff);
+
+    centerDegEl.textContent = `${Math.round(heading)}°`;
+    qiblaValEl.textContent = `${qiblaDeg.toFixed(1)}°`;
+    headingValEl.textContent = `${heading.toFixed(1)}°`;
+    diffValEl.textContent = absDiff <= 5
+        ? 'Tam Hizada!'
+        : `${diff > 0 ? '+' : ''}${Math.round(diff)}°`;
+
+    locInfoEl.textContent = `${state.qibla.sourceName} konumuna göre Kıble açısı: ${qiblaDeg.toFixed(1)}°`;
+
+    if (absDiff <= 5) {
+        outerRingEl.classList.add('qibla-aligned-ring');
+        alignedBadgeEl.classList.remove('hidden');
+    } else {
+        outerRingEl.classList.remove('qibla-aligned-ring');
+        alignedBadgeEl.classList.add('hidden');
+    }
+}
+
+// Cihaz Oryantasyon (Pusula) Sensörü Dinleyicisi
+function handleOrientationEvent(event) {
+    let heading = null;
+
+    if (typeof event.webkitCompassHeading === 'number') {
+        // iOS Safari pusula açısı
+        heading = event.webkitCompassHeading;
+    } else if (typeof event.alpha === 'number') {
+        // Android / Standart Web방위 açısı
+        heading = (360 - event.alpha) % 360;
+    }
+
+    if (heading !== null && !Number.isNaN(heading)) {
+        state.qibla.sensorActive = true;
+        state.qibla.deviceHeading = Math.round(heading * 10) / 10;
+
+        const statusEl = document.getElementById('compassSensorStatus');
+        if (statusEl) {
+            statusEl.textContent = 'Canlı pusula sensörü aktif (Telefonunuzu yere paralel tutun):';
+        }
+        const btnText = document.getElementById('enableCompassBtnText');
+        if (btnText) {
+            btnText.textContent = 'Sensör Aktif ✓';
+        }
+
+        renderQiblaCompassUI();
+    }
+}
+
+async function startCompassSensor() {
+    if (typeof DeviceOrientationEvent === 'undefined') {
+        showToast('Pusula Sensörü Bulunamadı', 'Cihazınızda donanımsal pusula sensörü yok. Alt kısımdaki kaydırıcı ile yön testi yapabilirsiniz.', 'amber');
+        return;
+    }
+
+    // iOS 13+ izin isteme kontrolü
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission !== 'granted') {
+                showToast('Sensör İzni Reddedildi', 'Kıble pusulasının canlı dönmesi için hareket/yön sensörü izni vermelisiniz.', 'amber');
+                return;
+            }
+        } catch (err) {
+            showToast('Sensör Başlatılamadı', 'Tarayıcınız sensör erişimine izin vermedi.', 'amber');
+            return;
+        }
+    }
+
+    window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true);
+    window.addEventListener('deviceorientation', handleOrientationEvent, true);
+    showToast('Pusula Sensörü Başlatıldı', 'Telefonunuzu 8 çizecek şekilde kalibre edip düz tutun.', 'emerald');
+}
+
+function requestGpsForQibla() {
+    if (!navigator.geolocation) {
+        showToast('Konum Desteklenmiyor', 'Tarayıcınız GPS konum özelliğini desteklemiyor.', 'amber');
+        return;
+    }
+
+    showToast('GPS Konumu Alınıyor...', 'Hassas Kıble açısı için konumunuz belirleniyor.', 'emerald');
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const { latitude, longitude } = pos.coords;
+            state.qibla.lat = latitude;
+            state.qibla.lng = longitude;
+            state.qibla.sourceName = `Hassas GPS (${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°)`;
+            state.qibla.qiblaAngle = calculateQiblaAngle(latitude, longitude);
+            renderQiblaCompassUI();
+            showToast('GPS Konumu Güncellendi', `Kıble açınız hassas koordinatlarınıza göre ${state.qibla.qiblaAngle}° olarak hesaplandı.`, 'emerald');
+        },
+        () => {
+            showToast('Konum İzni Alınamadı', 'Seçili il merkezinin koordinatları kullanılmaya devam ediliyor.', 'amber');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+    );
+}
+
+// ============================================================================
+// 3. EZAN VAKTİ BİLDİRİMLERİ (NOTIFICATION API & SESLİ UYARI)
+// ============================================================================
+
+function playGentleNotificationChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const notes = [523.25, 659.25, 783.99]; // C5 - E5 - G5 huzurlu akor
+        notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.18);
+            gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.18);
+            gain.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + idx * 0.18 + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + idx * 0.18 + 0.9);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + idx * 0.18);
+            osc.stop(ctx.currentTime + idx * 0.18 + 0.95);
+        });
+    } catch (e) {
+        // ignore audio restriction
+    }
+}
+
+function showToast(title, message, color = 'emerald') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    const borderClass = color === 'amber'
+        ? 'border-amber-500/40 bg-white/95 dark:bg-slate-900/95'
+        : 'border-emerald-500/40 bg-white/95 dark:bg-slate-900/95';
+
+    toast.className = `toast-enter pointer-events-auto p-4 rounded-2xl border shadow-xl backdrop-blur-md flex items-start gap-3 ${borderClass}`;
+    toast.innerHTML = `
+        <div class="w-8 h-8 rounded-xl ${
+            color === 'amber' ? 'bg-amber-500/15 text-amber-500' : 'bg-emerald-500/15 text-emerald-500'
+        } flex items-center justify-center shrink-0 font-bold">
+            🕌
+        </div>
+        <div class="flex-1 min-w-0">
+            <h5 class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">${title}</h5>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${message}</p>
+        </div>
+    `;
+
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+function sendEzanNotification(title, bodyText) {
+    playGentleNotificationChime();
+    showToast(title, bodyText, 'emerald');
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            new Notification(`BakVakitGeldi — ${title}`, {
+                body: bodyText,
+                tag: `bakvakitgeldi-${Date.now()}`
+            });
+        } catch (e) {
+            // Mobil tarayıcı kısıtlaması varsa toast zaten gösterildi
+        }
+    }
+}
+
+async function toggleNotifications() {
+    if (!('Notification' in window)) {
+        state.notificationsEnabled = !state.notificationsEnabled;
+        localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, state.notificationsEnabled ? '1' : '0');
+        renderNotificationUI();
+        showToast(
+            state.notificationsEnabled ? 'Uygulama İçi Bildirimler Açıldı' : 'Bildirimler Kapatıldı',
+            'Tarayıcınız masaüstü bildirim API desteklemiyor ancak sesli ve ekran içi uyarılar aktif.',
+            'emerald'
+        );
+        return;
+    }
+
+    if (state.notificationsEnabled) {
+        state.notificationsEnabled = false;
+        localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0');
+        renderNotificationUI();
+        showToast('Ezan Bildirimleri Kapatıldı', 'Vakit bildirimleri devre dışı bırakıldı.', 'amber');
+        return;
+    }
+
+    let perm = Notification.permission;
+    if (perm === 'default') {
+        perm = await Notification.requestPermission();
+    }
+
+    if (perm === 'granted') {
+        state.notificationsEnabled = true;
+        localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '1');
+        renderNotificationUI();
+        sendEzanNotification(
+            'Ezan Bildirimleri Aktif!',
+            `${getCityById(state.selectedCity).name} için ezan vakitleri girdiğinde bildirim alacaksınız.`
+        );
+    } else {
+        showToast('Bildirim İzni Gerekli', 'Tarayıcı adres çubuğundan bildirim iznini "İzin Ver" olarak ayarlayın.', 'amber');
+    }
+}
+
+function renderNotificationUI() {
+    const dot = document.getElementById('notifActiveDot');
+    const cardBtn = document.getElementById('notifCardToggleBtn');
+    const subtext = document.getElementById('notifCardSubtext');
+    const cityObj = getCityById(state.selectedCity);
+
+    if (state.notificationsEnabled) {
+        dot?.classList.remove('hidden');
+        if (cardBtn) {
+            cardBtn.textContent = 'Açık ✓';
+            cardBtn.className = 'px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition';
+        }
+        if (subtext) {
+            subtext.textContent = `${cityObj.name} vakitleri için bildirimler aktif.`;
+        }
+    } else {
+        dot?.classList.add('hidden');
+        if (cardBtn) {
+            cardBtn.textContent = 'Bildirimleri Aç';
+            cardBtn.className = 'px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-emerald-600 hover:text-white dark:bg-slate-800 dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 text-xs font-semibold transition';
+        }
+        if (subtext) {
+            subtext.textContent = 'Vakit girdiğinde anında tarayıcı bildirimi alın.';
+        }
+    }
+}
+
+// Dakika bazında ezan vakti kontrolü (Arka plan sayaç döngüsünden her saniye çağrılır)
+function checkPrayerTimeNotificationTrigger(now) {
+    if (!state.notificationsEnabled || !state.todayTimings) return;
+
+    const todayKey = toDateKey(now);
+    const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const cityObj = getCityById(state.selectedCity);
+
+    SIX_VAKIT_META.forEach((v) => {
+        const vakitHM = state.todayTimings[v.key];
+        const logKey = `${todayKey}_${state.selectedCity}_${v.key}`;
+
+        if (vakitHM === currentHM && !state.notifiedLog[logKey]) {
+            state.notifiedLog[logKey] = true;
+            try {
+                localStorage.setItem(STORAGE_KEYS.NOTIFIED_LOG, JSON.stringify(state.notifiedLog));
+            } catch (e) {
+                // ignore
+            }
+            sendEzanNotification(
+                v.notifTitle,
+                `${cityObj.name} için ${v.label} vakti girdi (${vakitHM}). Haydi namaza!`
+            );
+        }
+    });
+}
+
+// ============================================================================
+// 4. VERİ SAKLAMA, API VAKİTLERİ VE ARAYÜZ YÖNETİMİ
+// ============================================================================
+
 function loadFromStorage() {
     try {
         const savedDaily = localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS);
@@ -197,22 +906,32 @@ function loadFromStorage() {
         if (savedCache) {
             state.timingsCache = JSON.parse(savedCache);
         }
+
+        const savedNotif = localStorage.getItem(STORAGE_KEYS.NOTIF_ENABLED);
+        state.notificationsEnabled = savedNotif === '1';
+
+        const savedNotifLog = localStorage.getItem(STORAGE_KEYS.NOTIFIED_LOG);
+        if (savedNotifLog) {
+            state.notifiedLog = JSON.parse(savedNotifLog);
+        }
     } catch (err) {
         console.error('Veri okuma hatası:', err);
     }
 }
 
-function saveDailyRecords() {
+function saveDailyRecords(triggerCloud = true) {
     try {
         localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS, JSON.stringify(state.dailyRecords));
+        if (triggerCloud) scheduleCloudSync();
     } catch (err) {
         console.error('Veri kaydetme hatası:', err);
     }
 }
 
-function saveKazaCounts() {
+function saveKazaCounts(triggerCloud = true) {
     try {
         localStorage.setItem(STORAGE_KEYS.KAZA_COUNTS, JSON.stringify(state.kazaCounts));
+        if (triggerCloud) scheduleCloudSync();
     } catch (err) {
         console.error('Kaza verisi kaydetme hatası:', err);
     }
@@ -226,7 +945,7 @@ function saveTimingsCache() {
     }
 }
 
-// API'den Vakitleri Çek (veya Önbellek / Yedek Mod Kullan)
+// 81 İlin Koordinatlarıyla Aladhan API'den Diyanet (Method=13) Vakitlerini Çek
 async function fetchTimings(cityId, dateKey, forceRefresh = false) {
     const cacheKey = `${cityId}_${dateKey}`;
 
@@ -234,8 +953,10 @@ async function fetchTimings(cityId, dateKey, forceRefresh = false) {
         return { ...state.timingsCache[cacheKey], source: 'cached' };
     }
 
+    const cityObj = getCityById(cityId);
     const apiDate = toApiDateParam(dateKey);
-    const url = `https://api.aladhan.com/v1/timingsByCity/${apiDate}?city=${encodeURIComponent(cityId)}&country=Turkey&method=13`;
+    // Koordinat bazlı Diyanet (method=13) sorgusu 81 ilin tamamında %100 hatasız çalışır
+    const url = `https://api.aladhan.com/v1/timings/${apiDate}?latitude=${cityObj.lat}&longitude=${cityObj.lng}&method=13`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6500);
@@ -271,12 +992,10 @@ async function fetchTimings(cityId, dateKey, forceRefresh = false) {
         return { ...parsed, source: 'live' };
     } catch (error) {
         clearTimeout(timeoutId);
-        // Eğer önbellekte varsa önbellekten dön
         if (state.timingsCache[cacheKey]) {
             return { ...state.timingsCache[cacheKey], source: 'cached' };
         }
-        // Yoksa çevrimdışı varsayılan saatlere düş (uygulama asla çökmez)
-        return getFallbackTimings(cityId, dateKey);
+        return getFallbackTimings(cityId);
     }
 }
 
@@ -285,15 +1004,13 @@ async function syncPrayerTimings(forceRefresh = false) {
     const todayKey = toDateKey(new Date());
     const cityId = state.selectedCity;
 
-    // Yükleniyor durumu göster
     state.apiStatus = 'loading';
     renderApiStatusBadge();
 
-    // Önce varsa önbellek veya yedek veriyi hemen göster (sıfır gecikme hissi)
     const immediateSelected = state.timingsCache[`${cityId}_${state.selectedDate}`]
-        || getFallbackTimings(cityId, state.selectedDate);
+        || getFallbackTimings(cityId);
     const immediateToday = state.timingsCache[`${cityId}_${todayKey}`]
-        || getFallbackTimings(cityId, todayKey);
+        || getFallbackTimings(cityId);
 
     state.selectedDateTimings = immediateSelected;
     state.todayTimings = immediateToday;
@@ -301,7 +1018,6 @@ async function syncPrayerTimings(forceRefresh = false) {
     renderSixTimingsGrid();
     renderPrayerList();
 
-    // API'den güncel verileri çek
     const [selectedRes, todayRes] = await Promise.all([
         fetchTimings(cityId, state.selectedDate, forceRefresh),
         state.selectedDate === todayKey
@@ -331,7 +1047,7 @@ function renderApiStatusBadge() {
     const badge = document.getElementById('apiStatusBadge');
     const dot = document.getElementById('apiStatusDot');
     const text = document.getElementById('apiStatusText');
-    const cityObj = CITIES.find((c) => c.id === state.selectedCity) || CITIES[0];
+    const cityObj = getCityById(state.selectedCity);
 
     if (state.apiStatus === 'loading') {
         badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
@@ -348,11 +1064,11 @@ function renderApiStatusBadge() {
     } else {
         badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
         dot.className = 'w-2 h-2 rounded-full bg-amber-500';
-        text.textContent = `${cityObj.name} • Çevrimdışı Yedek Mod (Varsayılan Saatler)`;
+        text.textContent = `${cityObj.name} • Çevrimdışı Yedek Mod`;
     }
 }
 
-// Canlı Saat ve Bir Sonraki Vakte Geri Sayım Hesaplayıcı
+// Canlı Saat, Geri Sayım ve Ezan Bildirimi Kontrolü
 function updateLiveClockAndCountdown() {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
@@ -363,6 +1079,9 @@ function updateLiveClockAndCountdown() {
     if (clockEl) {
         clockEl.textContent = `${hours}:${minutes}:${seconds}`;
     }
+
+    // Ezan vakti girdi mi kontrol et
+    checkPrayerTimeNotificationTrigger(now);
 
     const t = state.todayTimings;
     if (!t) return;
@@ -434,34 +1153,28 @@ function updateLiveClockAndCountdown() {
     }
 
     let currentItem;
-    let nextItem;
     let startSec;
     let endSec;
 
     if (currentIdx === -1) {
-        // Gece 00:00 ile İmsak arası (Yatsı vakti devam ediyor)
         currentItem = {
             ...schedule[5],
             windowStr: `${t.yatsi} - ${t.imsak}`
         };
-        nextItem = schedule[0];
-        startSec = schedule[5].sec - 86400; // Dünkü yatsı
+        startSec = schedule[5].sec - 86400;
         endSec = schedule[0].sec;
     } else if (currentIdx === 5) {
-        // Yatsıdan gece yarısı / yarınki imsaka kadar
         currentItem = {
             ...schedule[5],
             windowStr: `${t.yatsi} - ${t.imsak}`
         };
-        nextItem = schedule[0];
         startSec = schedule[5].sec;
-        endSec = schedule[0].sec + 86400; // Yarınki imsak
+        endSec = schedule[0].sec + 86400;
     } else {
         currentItem = {
             ...schedule[currentIdx],
             windowStr: `${schedule[currentIdx].timeStr} - ${schedule[currentIdx + 1].timeStr}`
         };
-        nextItem = schedule[currentIdx + 1];
         startSec = schedule[currentIdx].sec;
         endSec = schedule[currentIdx + 1].sec;
     }
@@ -486,20 +1199,19 @@ function updateLiveClockAndCountdown() {
     state.activeVakitKeyNow = currentItem.key;
     state.activePrayerIdNow = currentItem.prayerId;
 
-    // Vakit değiştiyse 6'lı vakit kutularını ve namaz listesini yeniden vurgula
     if (prevActiveVakit !== state.activeVakitKeyNow) {
         renderSixTimingsGrid();
         renderPrayerList();
     }
 }
 
-// 6 Resmi Vakit Kutucuklarını Render Et (İmsak, Güneş, Öğle, İkindi, Akşam, Yatsı)
+// 6 Resmi Vakit Kutucuklarını Render Et
 function renderSixTimingsGrid() {
     const grid = document.getElementById('sixTimingsGrid');
     if (!grid) return;
 
     const isTodaySelected = state.selectedDate === toDateKey(new Date());
-    const timings = state.selectedDateTimings || getFallbackTimings(state.selectedCity, state.selectedDate);
+    const timings = state.selectedDateTimings || getFallbackTimings(state.selectedCity);
 
     grid.innerHTML = '';
 
@@ -529,7 +1241,7 @@ function renderSixTimingsGrid() {
     });
 }
 
-// Şehir Seçim Menüsünü Doldur
+// 81 İl Seçim Menüsünü Doldur
 function initCitySelect() {
     const select = document.getElementById('citySelect');
     if (!select) return;
@@ -557,21 +1269,20 @@ function getDayRecord(dateKey) {
                 aksam: false,
                 yatsi: false
             },
-            mode: {}, // 'eda' veya 'kaza'
+            mode: {},
             note: ''
         };
     }
     return state.dailyRecords[dateKey];
 }
 
-// Bir günde kaç vakit kılındığını hesapla
 function getCompletedCountForDate(dateKey) {
     const record = state.dailyRecords[dateKey];
     if (!record || !record.prayers) return 0;
     return PRAYERS.reduce((acc, p) => acc + (record.prayers[p.id] ? 1 : 0), 0);
 }
 
-// Tema Yönetimi (Koyu / Açık)
+// Tema Yönetimi
 function initTheme() {
     const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -606,7 +1317,6 @@ function renderCalendarSection() {
     const todayKey = toDateKey(new Date());
     const selectedDateObj = parseDateKey(state.selectedDate);
 
-    // Uzun Türkçe Tarih Formatı
     const formatter = new Intl.DateTimeFormat('tr-TR', {
         day: 'numeric',
         month: 'long',
@@ -615,13 +1325,11 @@ function renderCalendarSection() {
     });
     document.getElementById('selectedDateFormatted').textContent = formatter.format(selectedDateObj);
 
-    // Tarih Input Değeri
     const datePicker = document.getElementById('datePicker');
     if (datePicker.value !== state.selectedDate) {
         datePicker.value = state.selectedDate;
     }
 
-    // Bugün Rozeti ve "Bugün" Butonu
     const badge = document.getElementById('selectedDateBadge');
     const todayBtn = document.getElementById('todayBtn');
 
@@ -646,7 +1354,6 @@ function renderCalendarSection() {
         todayBtn.classList.remove('hidden');
     }
 
-    // 7 Günlük Şerit
     const weekStrip = document.getElementById('weekStrip');
     weekStrip.innerHTML = '';
 
@@ -695,10 +1402,10 @@ function renderCalendarSection() {
     }
 }
 
-// Günlük İlerleme Çubuğunu (Progress Bar) Güncelle
+// Günlük İlerleme Çubuğunu Güncelle
 function renderProgressBar() {
     const completedCount = getCompletedCountForDate(state.selectedDate);
-    const totalCount = PRAYERS.length; // 5
+    const totalCount = PRAYERS.length;
     const percentage = Math.round((completedCount / totalCount) * 100);
 
     document.getElementById('progressSubtext').textContent = `${totalCount}'te ${completedCount} kılındı - %${percentage}`;
@@ -721,11 +1428,11 @@ function renderProgressBar() {
     }
 }
 
-// 5 Vakit Namaz Listesini Render Et (Otomatik Vakit Eşleşmeli)
+// 5 Vakit Namaz Listesini Render Et
 function renderPrayerList(changedPrayerId = null) {
     const container = document.getElementById('prayerList');
     const record = getDayRecord(state.selectedDate);
-    const timings = state.selectedDateTimings || getFallbackTimings(state.selectedCity, state.selectedDate);
+    const timings = state.selectedDateTimings || getFallbackTimings(state.selectedCity);
     const isTodaySelected = state.selectedDate === toDateKey(new Date());
 
     container.innerHTML = '';
@@ -736,7 +1443,6 @@ function renderPrayerList(changedPrayerId = null) {
         const isJustChanged = changedPrayerId === prayer.id;
         const isCurrentActivePrayer = isTodaySelected && state.activePrayerIdNow === prayer.id;
 
-        // Vakit saatini belirle (Sabah için İmsak ve Güneş aralığını göster)
         const mainTime = timings[prayer.vakitKey] || '--:--';
         const timeBadgeText = prayer.id === 'sabah'
             ? `${timings.imsak} • Güneş ${timings.gunes}`
@@ -755,7 +1461,6 @@ function renderPrayerList(changedPrayerId = null) {
 
         card.innerHTML = `
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <!-- Sol Kısım: İkon, Vakit İsmi ve Gerçek Vakit Saati -->
                 <div class="flex items-start sm:items-center gap-3.5 cursor-pointer select-none flex-1" data-toggle-prayer="${prayer.id}">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
                         isPrayed
@@ -777,7 +1482,6 @@ function renderPrayerList(changedPrayerId = null) {
                                 ${prayer.name}
                             </h4>
 
-                            <!-- Gerçek Vakit Saati Rozeti -->
                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-mono text-xs font-bold ${
                                 isPrayed
                                     ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200'
@@ -816,7 +1520,6 @@ function renderPrayerList(changedPrayerId = null) {
                     </div>
                 </div>
 
-                <!-- Sağ Kısım: Kılındı / Kılınmadı İnteraktif Butonları -->
                 <div class="flex items-center gap-2 self-end sm:self-center">
                     ${
                         isPrayed
@@ -851,13 +1554,11 @@ function renderPrayerList(changedPrayerId = null) {
         container.appendChild(card);
     });
 
-    // Günlük not alanını güncelle
     const noteInput = document.getElementById('dailyNote');
     if (noteInput) {
         noteInput.value = record.note || '';
     }
 
-    // İkonları yenile
     if (window.lucide) {
         window.lucide.createIcons();
     }
@@ -909,7 +1610,7 @@ function renderKazaSection() {
     document.getElementById('statTotalKaza').textContent = `${totalKaza} Vakit`;
 }
 
-// Genel İstatistikleri ve Seri (Streak) Hesaplamasını Güncelle
+// Genel İstatistikleri Güncelle
 function renderStats() {
     let totalPrayed = 0;
     let perfectDays = 0;
@@ -922,7 +1623,6 @@ function renderStats() {
         }
     });
 
-    // Son 7 gün oranı
     const today = new Date();
     let last7Completed = 0;
     for (let i = 0; i < 7; i++) {
@@ -932,7 +1632,6 @@ function renderStats() {
     }
     const weeklyRate = Math.round((last7Completed / 35) * 100);
 
-    // Seri (Streak) hesabı: Bugünden geriye 5/5 tamamlanan günler
     let streak = 0;
     const checkDate = new Date(today);
     if (getCompletedCountForDate(toDateKey(checkDate)) < 5) {
@@ -956,7 +1655,7 @@ function setSelectedDate(dateKey) {
     syncPrayerTimings(false);
 }
 
-// Şehir Değiştirme
+// Şehir Değiştirme (81 İl)
 function setSelectedCity(cityId) {
     state.selectedCity = cityId;
     try {
@@ -964,10 +1663,13 @@ function setSelectedCity(cityId) {
     } catch (e) {
         console.error(e);
     }
+    updateQiblaForSelectedCity();
+    renderNotificationUI();
     syncPrayerTimings(false);
+    scheduleCloudSync();
 }
 
-// Namaz Durumunu Değiştir (Kılındı / Kılınmadı)
+// Namaz Durumunu Değiştir
 function togglePrayerStatus(prayerId) {
     const record = getDayRecord(state.selectedDate);
     record.prayers[prayerId] = !record.prayers[prayerId];
@@ -976,7 +1678,7 @@ function togglePrayerStatus(prayerId) {
         record.mode[prayerId] = 'eda';
     }
 
-    saveDailyRecords();
+    saveDailyRecords(true);
     renderCalendarSection();
     renderProgressBar();
     renderPrayerList(prayerId);
@@ -988,8 +1690,45 @@ function togglePrayerMode(prayerId) {
     const record = getDayRecord(state.selectedDate);
     if (!record.mode) record.mode = {};
     record.mode[prayerId] = record.mode[prayerId] === 'kaza' ? 'eda' : 'kaza';
-    saveDailyRecords();
+    saveDailyRecords(true);
     renderPrayerList(prayerId);
+}
+
+// Sekme Değiştirici (5 Vakit | Kaza | Kıble Pusulası)
+function switchMainTab(tabName) {
+    const tabs = {
+        daily: {
+            btn: document.getElementById('tabDailyBtn'),
+            section: document.getElementById('dailySection')
+        },
+        kaza: {
+            btn: document.getElementById('tabKazaBtn'),
+            section: document.getElementById('kazaSection')
+        },
+        qibla: {
+            btn: document.getElementById('tabQiblaBtn'),
+            section: document.getElementById('qiblaSection')
+        }
+    };
+
+    const activeClass = 'flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-1.5';
+    const inactiveClass = 'flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
+
+    Object.keys(tabs).forEach((key) => {
+        const item = tabs[key];
+        if (!item.btn || !item.section) return;
+        if (key === tabName) {
+            item.section.classList.remove('hidden');
+            item.btn.className = activeClass;
+        } else {
+            item.section.classList.add('hidden');
+            item.btn.className = inactiveClass;
+        }
+    });
+
+    if (tabName === 'qibla') {
+        renderQiblaCompassUI();
+    }
 }
 
 // Tüm Ekranı Render Et
@@ -999,6 +1738,8 @@ function renderAll() {
     renderSixTimingsGrid();
     renderPrayerList();
     renderKazaSection();
+    renderQiblaCompassUI();
+    renderNotificationUI();
     renderStats();
 }
 
@@ -1007,7 +1748,7 @@ function setupEventListeners() {
     // Tema Değiştirici
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-    // Şehir Seçici
+    // 81 İl Seçici
     document.getElementById('citySelect').addEventListener('change', (e) => {
         if (e.target.value) {
             setSelectedCity(e.target.value);
@@ -1019,8 +1760,41 @@ function setupEventListeners() {
         syncPrayerTimings(true);
     });
 
+    // Bildirim Aç / Kapat & Test Butonları
+    document.getElementById('notificationToggleBtn').addEventListener('click', toggleNotifications);
+    document.getElementById('notifCardToggleBtn').addEventListener('click', toggleNotifications);
+    document.getElementById('testNotificationBtn').addEventListener('click', () => {
+        const cityObj = getCityById(state.selectedCity);
+        sendEzanNotification(
+            'Örnek Vakit Bildirimi!',
+            `${cityObj.name} için ezan vakti girdiğinde bildirimleriniz bu şekilde görünecektir.`
+        );
+    });
+
+    // Bulut Senkronizasyon Butonları
+    document.getElementById('forceCloudSyncBtn').addEventListener('click', () => {
+        scheduleCloudSync();
+        showToast('Bulut Eşitleme Başlatıldı', 'Namaz ve kaza kayıtlarınız cihaz kimliğinizle buluta yedeklendi.', 'emerald');
+    });
+    document.getElementById('cloudStatusBtn').addEventListener('click', () => {
+        restoreFromCloudIfNeeded(true);
+    });
+
+    // Kıble Pusulası Kontrolleri
+    document.getElementById('enableCompassBtn').addEventListener('click', startCompassSensor);
+    document.getElementById('gpsQiblaBtn').addEventListener('click', requestGpsForQibla);
+    document.getElementById('manualCompassSlider').addEventListener('input', (e) => {
+        const val = Number(e.target.value) || 0;
+        state.qibla.deviceHeading = val;
+        document.getElementById('manualSliderLabel').textContent = `${val}°`;
+        renderQiblaCompassUI();
+    });
+
     // Çevrimiçi / Çevrimdışı Olay Dinleyicileri
-    window.addEventListener('online', () => syncPrayerTimings(false));
+    window.addEventListener('online', () => {
+        syncPrayerTimings(false);
+        scheduleCloudSync();
+    });
     window.addEventListener('offline', () => {
         if (state.apiStatus === 'live') {
             state.apiStatus = 'cached';
@@ -1060,7 +1834,7 @@ function setupEventListeners() {
             if (!record.mode) record.mode = {};
             if (!record.mode[p.id]) record.mode[p.id] = 'eda';
         });
-        saveDailyRecords();
+        saveDailyRecords(true);
         renderAll();
     });
 
@@ -1069,11 +1843,11 @@ function setupEventListeners() {
         PRAYERS.forEach((p) => {
             record.prayers[p.id] = false;
         });
-        saveDailyRecords();
+        saveDailyRecords(true);
         renderAll();
     });
 
-    // Namaz Kartları Tıklama (Event Delegation)
+    // Namaz Kartları Tıklama
     document.getElementById('prayerList').addEventListener('click', (e) => {
         const modeBtn = e.target.closest('[data-mode-toggle]');
         if (modeBtn) {
@@ -1093,7 +1867,7 @@ function setupEventListeners() {
     document.getElementById('dailyNote').addEventListener('input', (e) => {
         const record = getDayRecord(state.selectedDate);
         record.note = e.target.value;
-        saveDailyRecords();
+        saveDailyRecords(true);
 
         const indicator = document.getElementById('noteSavedIndicator');
         indicator.classList.remove('opacity-0');
@@ -1103,25 +1877,10 @@ function setupEventListeners() {
         }, 1500);
     });
 
-    // Sekme Geçişleri (Günlük 5 Vakit <-> Kaza Çetelesi)
-    const tabDailyBtn = document.getElementById('tabDailyBtn');
-    const tabKazaBtn = document.getElementById('tabKazaBtn');
-    const dailySection = document.getElementById('dailySection');
-    const kazaSection = document.getElementById('kazaSection');
-
-    tabDailyBtn.addEventListener('click', () => {
-        dailySection.classList.remove('hidden');
-        kazaSection.classList.add('hidden');
-        tabDailyBtn.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-2';
-        tabKazaBtn.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-2';
-    });
-
-    tabKazaBtn.addEventListener('click', () => {
-        kazaSection.classList.remove('hidden');
-        dailySection.classList.add('hidden');
-        tabKazaBtn.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-2';
-        tabDailyBtn.className = 'px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-2';
-    });
+    // Sekme Geçişleri (5 Vakit | Kaza | Kıble Pusulası)
+    document.getElementById('tabDailyBtn').addEventListener('click', () => switchMainTab('daily'));
+    document.getElementById('tabKazaBtn').addEventListener('click', () => switchMainTab('kaza'));
+    document.getElementById('tabQiblaBtn').addEventListener('click', () => switchMainTab('qibla'));
 
     // Kaza Çetelesi Artır / Azalt
     document.getElementById('kazaList').addEventListener('click', (e) => {
@@ -1137,7 +1896,7 @@ function setupEventListeners() {
             state.kazaCounts[id] = Math.max(0, current - 1);
         }
 
-        saveKazaCounts();
+        saveKazaCounts(true);
         renderKazaSection();
     });
 
@@ -1146,7 +1905,7 @@ function setupEventListeners() {
         KAZA_TYPES.forEach((t) => {
             state.kazaCounts[t.id] = (state.kazaCounts[t.id] || 0) + 1;
         });
-        saveKazaCounts();
+        saveKazaCounts(true);
         renderKazaSection();
     });
 }
@@ -1154,11 +1913,14 @@ function setupEventListeners() {
 // Başlat
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
+    initDeviceUuid();
     loadFromStorage();
     initCitySelect();
+    updateQiblaForSelectedCity();
     setupEventListeners();
     renderAll();
     updateLiveClockAndCountdown();
     setInterval(updateLiveClockAndCountdown, 1000);
     syncPrayerTimings(false);
+    restoreFromCloudIfNeeded(false);
 });

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BakVakitGeldi — Namaz & Kaza Takip Uygulaması</title>
+    <title>BakVakitGeldi — Namaz, Vakit, Kıble & Kaza Takip Uygulaması</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -51,6 +51,9 @@
         <div class="absolute top-1/3 -right-24 w-96 h-96 bg-teal-500/10 dark:bg-teal-500/5 rounded-full blur-3xl"></div>
     </div>
 
+    <!-- Bildirim / Uyarı Toast Alanı -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
     <!-- Üst Bar (Header) -->
     <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/85 dark:bg-slate-900/85 border-b border-slate-200/80 dark:border-slate-800/80">
         <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
@@ -63,24 +66,40 @@
                     <h1 class="font-extrabold text-lg sm:text-xl tracking-tight leading-none">
                         <span class="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 dark:from-amber-400 dark:via-orange-400 dark:to-rose-400 bg-clip-text text-transparent">Bak</span><span class="text-slate-900 dark:text-white">VakitGeldi</span>
                     </h1>
-                    <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">Namaz & Kaza Takibi</p>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Namaz & Kaza Takibi</p>
+                        <span class="text-slate-300 dark:text-slate-700">•</span>
+                        <!-- Otomatik Bulut Senkronizasyon Rozeti -->
+                        <button id="cloudStatusBtn" type="button" title="Şifresiz Otomatik Bulut Yedekleme Durumu"
+                            class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                            <i data-lucide="cloud-check" id="cloudStatusIcon" class="w-3 h-3"></i>
+                            <span id="cloudStatusText">Bulut Aktif</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Sağ Kontroller: Şehir Seçimi + Seri Rozeti + Tema -->
-            <div class="flex items-center gap-2">
-                <!-- Şehir Seçme Menüsü -->
+            <!-- Sağ Kontroller: 81 İl Seçimi + Ezan Bildirimi + Seri Rozeti + Tema -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- 81 İl Seçme Menüsü -->
                 <div class="relative flex items-center">
-                    <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-3 pointer-events-none"></i>
-                    <select id="citySelect" aria-label="Şehir Seçimi"
-                        class="pl-8 pr-7 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition">
-                        <!-- JS ile doldurulacak -->
+                    <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-2.5 pointer-events-none"></i>
+                    <select id="citySelect" aria-label="81 İl Şehir Seçimi"
+                        class="pl-8 pr-6 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer transition max-w-[135px] sm:max-w-[160px] truncate">
+                        <!-- JS ile 81 İl alfabetik doldurulacak -->
                     </select>
-                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 pointer-events-none"></i>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2 pointer-events-none"></i>
                 </div>
 
+                <!-- Ezan Vakti Bildirim Butonu -->
+                <button id="notificationToggleBtn" type="button" title="Ezan Vakti Bildirimlerini Aç / Kapat"
+                    class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors relative">
+                    <i data-lucide="bell" id="bellIcon" class="w-5 h-5"></i>
+                    <span id="notifActiveDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"></span>
+                </button>
+
                 <!-- Seri (Streak) Rozeti -->
-                <div id="streakBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold" title="5 vakit tam kılınan gün serisi">
+                <div id="streakBadge" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold" title="5 vakit tam kılınan gün serisi">
                     <i data-lucide="flame" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
                     <span id="streakCount">0 Gün Seri</span>
                 </div>
@@ -127,7 +146,7 @@
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                         Şu Anki Vakit Dilimi
                     </p>
-                    <div class="flex items-center gap-2.5">
+                    <div class="flex flex-wrap items-center gap-2.5">
                         <span id="currentVakitName" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
                             --
                         </span>
@@ -169,7 +188,7 @@
                         Bugün
                     </span>
                     <h2 id="selectedDateFormatted" class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                        15 Ekim 2026, Perşembe
+                        17 Ekim 2026, Cumartesi
                     </h2>
                 </div>
 
@@ -253,19 +272,24 @@
             </div>
         </section>
 
-        <!-- Sekmeler: Günlük 5 Vakit & Kaza Çetelesi -->
-        <div class="flex items-center justify-between">
-            <div class="inline-flex p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <!-- Ana Sekmeler: 5 Vakit Namaz Listesi | Kaza Çetelesi | Kıble Pusulası -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="inline-flex flex-wrap p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
                 <button id="tabDailyBtn" type="button"
-                    class="px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-2">
+                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm flex items-center gap-1.5">
                     <i data-lucide="list-checks" class="w-4 h-4 text-emerald-500"></i>
-                    5 Vakit Namaz Listesi
+                    <span>5 Vakit Namaz</span>
                 </button>
                 <button id="tabKazaBtn" type="button"
-                    class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-2">
+                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
                     <i data-lucide="history" class="w-4 h-4"></i>
-                    Kaza Namazı Çetelesi
+                    <span>Kaza Çetelesi</span>
                     <span id="totalKazaBadge" class="px-1.5 py-0.2 text-[11px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">0</span>
+                </button>
+                <button id="tabQiblaBtn" type="button"
+                    class="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                    <i data-lucide="compass" class="w-4 h-4 text-amber-500"></i>
+                    <span>Kıble Pusulası</span>
                 </button>
             </div>
         </div>
@@ -283,7 +307,7 @@
                         <i data-lucide="notebook-pen" class="w-4 h-4 text-emerald-500"></i>
                         Günün Notu / Tefekkür
                     </span>
-                    <span id="noteSavedIndicator" class="text-emerald-500 opacity-0 transition-opacity duration-300 lowercase font-normal">kaydedildi ✓</span>
+                    <span id="noteSavedIndicator" class="text-emerald-500 opacity-0 transition-opacity duration-300 lowercase font-normal">buluta kaydedildi ✓</span>
                 </label>
                 <textarea id="dailyNote" rows="2"
                     placeholder="Bugün kıldığın namazlar, tesbihat veya kaza notların..."
@@ -314,8 +338,158 @@
             </div>
         </section>
 
+        <!-- SEKME 3: Kıble Pusulası -->
+        <section id="qiblaSection" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+                <!-- Üst Başlık ve Konum Kontrolleri -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">İnteraktif Kıble Pusulası</h3>
+                            <span id="qiblaAlignedBadge" class="hidden px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 animate-pulse">
+                                Kıble Hizalandı 🕋
+                            </span>
+                        </div>
+                        <p id="qiblaLocationInfo" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Seçili il koordinatlarına göre Kâbe-i Muazzama açısı hesaplandı.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="enableCompassBtn" type="button"
+                            class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                            <span id="enableCompassBtnText">Sensörü Başlat</span>
+                        </button>
+                        <button id="gpsQiblaBtn" type="button"
+                            class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200/80 dark:border-slate-700">
+                            <i data-lucide="locate-fixed" class="w-3.5 h-3.5 text-emerald-500"></i>
+                            <span>GPS Konumu Al</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pusula Kadranı -->
+                <div class="py-8 flex flex-col items-center justify-center">
+                    <!-- Üst Hedef Ok İşareti (Telefonun Üst Yönü) -->
+                    <div class="mb-3 flex flex-col items-center">
+                        <div id="qiblaTopPointer" class="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[16px] border-b-emerald-500 transition-colors"></div>
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-1">Cihaz Yönü</span>
+                    </div>
+
+                    <!-- Dönen Pusula Çemberi -->
+                    <div id="compassOuterRing" class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border-4 border-slate-200 dark:border-slate-800 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 shadow-inner flex items-center justify-center transition-all duration-300">
+                        
+                        <!-- Dönen İç Kadran (Kuzey, Doğu, Güney, Batı + Kıble İğnesi) -->
+                        <div id="compassDial" class="relative w-full h-full rounded-full transition-transform duration-150 ease-out" style="transform: rotate(0deg);">
+                            <!-- Yön Harfleri -->
+                            <span class="absolute top-3 left-1/2 -translate-x-1/2 font-extrabold text-sm text-rose-500">K (N)</span>
+                            <span class="absolute bottom-3 left-1/2 -translate-x-1/2 font-bold text-xs text-slate-400">G (S)</span>
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">D (E)</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">B (W)</span>
+
+                            <!-- Derece Çizgileri -->
+                            <div class="absolute inset-6 rounded-full border border-dashed border-slate-300 dark:border-slate-800"></div>
+
+                            <!-- Kıble (Kâbe) Yönü İbresi (Kuzeye Göre Kıble Açısına Döndürülür) -->
+                            <div id="qiblaNeedleContainer" class="absolute inset-0 flex items-center justify-center" style="transform: rotate(151deg);">
+                                <div class="w-1.5 h-full flex flex-col items-center justify-start pt-7">
+                                    <!-- Kâbe İkonu / Başlığı -->
+                                    <div class="w-9 h-9 -mt-2 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/30 flex items-center justify-center font-bold text-base border-2 border-white dark:border-slate-900">
+                                        🕋
+                                    </div>
+                                    <!-- İbre Çubuğu -->
+                                    <div class="w-1.5 h-20 bg-gradient-to-b from-amber-500 to-emerald-500 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Merkez Noktası -->
+                        <div class="absolute w-14 h-14 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center justify-center z-10">
+                            <span id="compassCenterDeg" class="font-mono font-extrabold text-xs text-slate-800 dark:text-slate-100">0°</span>
+                            <span class="text-[9px] text-slate-400 uppercase">Pusula</span>
+                        </div>
+                    </div>
+
+                    <!-- Açı Bilgileri Özeti -->
+                    <div class="grid grid-cols-3 gap-3 w-full max-w-md mt-6">
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
+                            <p class="text-[11px] text-slate-400 font-medium">Kıble Açısı</p>
+                            <p id="qiblaAngleValue" class="font-mono text-base sm:text-lg font-extrabold text-amber-500 mt-0.5">151.6°</p>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
+                            <p class="text-[11px] text-slate-400 font-medium">Cihaz Yönü</p>
+                            <p id="deviceHeadingValue" class="font-mono text-base sm:text-lg font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">0.0°</p>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center">
+                            <p class="text-[11px] text-slate-400 font-medium">Hedef Farkı</p>
+                            <p id="qiblaDiffValue" class="font-mono text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">--°</p>
+                        </div>
+                    </div>
+
+                    <!-- Masaüstü / Manuel Pusula Simülasyon Kaydırıcısı -->
+                    <div class="w-full max-w-md mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+                            <span id="compassSensorStatus">Pusula sensörü olmayan cihazlar için manuel yön testi:</span>
+                            <span id="manualSliderLabel" class="font-mono font-semibold">0°</span>
+                        </div>
+                        <input id="manualCompassSlider" type="range" min="0" max="359" value="0"
+                            class="w-full accent-emerald-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ezan Bildirimleri & Otomatik Bulut Yedekleme Durum Kartı -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Ezan Vakti Bildirim Kartı -->
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <i data-lucide="bell-ring" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">Ezan Vakti Bildirimleri</h4>
+                        <p id="notifCardSubtext" class="text-[11px] text-slate-500 dark:text-slate-400">
+                            Vakit girdiğinde anında tarayıcı bildirimi alın.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button id="testNotificationBtn" type="button" title="Test Bildirimi Gönder"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 transition">
+                        Test Et
+                    </button>
+                    <button id="notifCardToggleBtn" type="button"
+                        class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition">
+                        Aç
+                    </button>
+                </div>
+            </div>
+
+            <!-- Şifresiz Otomatik Bulut Yedekleme Kartı -->
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <i data-lucide="database-backup" class="w-5 h-5"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h4 class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">Otomatik Bulut Yedekleme</h4>
+                        <p id="cloudCardSubtext" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            Şifresiz Cihaz UUID ile anlık senkronize.
+                        </p>
+                    </div>
+                </div>
+                <button id="forceCloudSyncBtn" type="button" title="Şimdi Bulutla Eşitle"
+                    class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shrink-0 flex items-center gap-1">
+                    <i data-lucide="refresh-ccw" class="w-3.5 h-3.5 text-emerald-500"></i>
+                    <span>Eşitle</span>
+                </button>
+            </div>
+        </section>
+
         <!-- Genel İstatistik Özeti -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
             <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
                 <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Toplam Kılınan</p>
                 <p id="statTotalPrayed" class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">0 Vakit</p>
@@ -337,8 +511,13 @@
     </main>
 
     <!-- Alt Bilgi -->
-    <footer class="text-center py-6 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900">
-        <span class="font-bold"><span class="text-amber-500 dark:text-amber-400">Bak</span><span class="text-slate-700 dark:text-slate-300">VakitGeldi</span></span> • Verileriniz tarayıcınızda (<code class="font-mono">localStorage</code>) güvenle saklanır • Resmi Diyanet hesaplama metodu (Aladhan API) ve Çevrimdışı Yedek Mod desteklidir.
+    <footer class="text-center py-6 px-4 text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-900 space-y-1">
+        <div>
+            <span class="font-bold"><span class="text-amber-500 dark:text-amber-400">Bak</span><span class="text-slate-700 dark:text-slate-300">VakitGeldi</span></span> • 81 İl Diyanet Namaz Vakitleri • Kıble Pusulası • Ezan Bildirimleri
+        </div>
+        <div class="text-[11px]">
+            Şifresiz Bulut Yedekleme Kimliği: <code id="footerDeviceUuid" class="font-mono text-slate-500 dark:text-slate-400">yükleniyor...</code>
+        </div>
     </footer>
 
     <!-- Uygulama Scripti -->
