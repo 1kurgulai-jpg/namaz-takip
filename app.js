@@ -1334,8 +1334,10 @@ function updateLiveClockAndCountdown() {
     state.activePrayerIdNow = currentItem.prayerId;
 
     if (prevActiveVakit !== state.activeVakitKeyNow) {
+        autoSyncMissedPrayersToKaza();
         renderSixTimingsGrid();
         renderPrayerList();
+        renderKazaSection();
     }
 }
 
@@ -1403,11 +1405,97 @@ function getDayRecord(dateKey) {
                 aksam: false,
                 yatsi: false
             },
+            missed: {
+                sabah: false,
+                ogle: false,
+                ikindi: false,
+                aksam: false,
+                yatsi: false
+            },
+            kazaAdded: {
+                sabah: false,
+                ogle: false,
+                ikindi: false,
+                aksam: false,
+                yatsi: false
+            },
             mode: {},
             note: ''
         };
+    } else {
+        const rec = state.dailyRecords[dateKey];
+        if (!rec.prayers) {
+            rec.prayers = { sabah: false, ogle: false, ikindi: false, aksam: false, yatsi: false };
+        }
+        if (!rec.missed) {
+            rec.missed = { sabah: false, ogle: false, ikindi: false, aksam: false, yatsi: false };
+        }
+        if (!rec.kazaAdded) {
+            rec.kazaAdded = { sabah: false, ogle: false, ikindi: false, aksam: false, yatsi: false };
+        }
+        if (!rec.mode) {
+            rec.mode = {};
+        }
     }
     return state.dailyRecords[dateKey];
+}
+
+// Kılınmadan geçen vakitleri arka planda otomatik olarak Kaza Borçlarına ekle
+function autoSyncMissedPrayersToKaza() {
+    const now = new Date();
+    const todayKey = toDateKey(now);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const todayTimings = state.todayTimings || state.selectedDateTimings || getFallbackTimings(state.selectedCity);
+
+    // Bugünün kaydının var olduğundan emin ol
+    getDayRecord(todayKey);
+
+    // Bugün vakti tamamen çıkmış olan namazların bitiş eşikleri (dakika cinsinden)
+    const todayEndThresholds = {
+        sabah: timeStrToMinutes(todayTimings.gunes),
+        ogle: timeStrToMinutes(todayTimings.ikindi),
+        ikindi: timeStrToMinutes(todayTimings.aksam),
+        aksam: timeStrToMinutes(todayTimings.yatsi),
+        yatsi: 24 * 60 + 60 // Yatsı vakti gün sonuna / imsaka kadar devam eder
+    };
+
+    let anyChanged = false;
+
+    Object.keys(state.dailyRecords).forEach((dateKey) => {
+        if (dateKey > todayKey) return; // Gelecek günleri atla
+        const rec = getDayRecord(dateKey);
+
+        PRAYERS.forEach((p) => {
+            const pid = p.id;
+            const isPrayed = Boolean(rec.prayers[pid]);
+
+            if (isPrayed) return;
+
+            let windowPassed = false;
+            if (dateKey < todayKey) {
+                // Geçmiş günlerde kılınmamış tüm vakitler
+                windowPassed = true;
+            } else if (dateKey === todayKey) {
+                // Bugün vakti çıkmış ve henüz kılınmamış vakitler
+                const endMin = todayEndThresholds[pid];
+                if (typeof endMin === 'number' && nowMinutes >= endMin && !rec.manualReset?.[pid]) {
+                    windowPassed = true;
+                }
+            }
+
+            if (windowPassed && !rec.kazaAdded[pid]) {
+                rec.missed[pid] = true;
+                rec.kazaAdded[pid] = true;
+                state.kazaCounts[pid] = (state.kazaCounts[pid] || 0) + 1;
+                anyChanged = true;
+            }
+        });
+    });
+
+    if (anyChanged) {
+        saveDailyRecords(false);
+        saveKazaCounts(true);
+    }
 }
 
 function getCompletedCountForDate(dateKey) {
@@ -1562,7 +1650,7 @@ function renderProgressBar() {
     }
 }
 
-// 5 Vakit Namaz Listesini Render Et
+// 5 Vakit Namaz Listesini Render Et (Kıldım / Kılmadım Çift Buton & Otomatik Kaza Entegrasyonlu)
 function renderPrayerList(changedPrayerId = null) {
     const container = document.getElementById('prayerList');
     const record = getDayRecord(state.selectedDate);
@@ -1573,6 +1661,8 @@ function renderPrayerList(changedPrayerId = null) {
 
     PRAYERS.forEach((prayer) => {
         const isPrayed = Boolean(record.prayers[prayer.id]);
+        const isMissed = !isPrayed && Boolean(record.missed?.[prayer.id]);
+        const isKazaAdded = Boolean(record.kazaAdded?.[prayer.id]);
         const mode = record.mode?.[prayer.id] || 'eda';
         const isJustChanged = changedPrayerId === prayer.id;
         const isCurrentActivePrayer = isTodaySelected && state.activePrayerIdNow === prayer.id;
@@ -1587,7 +1677,9 @@ function renderPrayerList(changedPrayerId = null) {
             isJustChanged ? 'prayer-card-completed' : ''
         } ${
             isPrayed
-                ? 'bg-emerald-50/90 dark:bg-emerald-950/35 border-emerald-500/60 dark:border-emerald-500/50 shadow-sm shadow-emerald-500/5'
+                ? 'bg-emerald-50/90 dark:bg-emerald-950/35 border-emerald-500/70 dark:border-emerald-500/60 shadow-sm shadow-emerald-500/10'
+                : isMissed
+                ? 'bg-rose-50/85 dark:bg-rose-950/30 border-rose-500/70 dark:border-rose-500/60 shadow-sm shadow-rose-500/10'
                 : isCurrentActivePrayer
                 ? 'bg-white dark:bg-slate-900 border-emerald-500 dark:border-emerald-500/80 ring-2 ring-emerald-500/15 shadow-md'
                 : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
@@ -1595,15 +1687,17 @@ function renderPrayerList(changedPrayerId = null) {
 
         card.innerHTML = `
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div class="flex items-start sm:items-center gap-3.5 cursor-pointer select-none flex-1" data-toggle-prayer="${prayer.id}">
+                <div class="flex items-start sm:items-center gap-3.5 select-none flex-1">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
                         isPrayed
-                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+                            : isMissed
+                            ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
                             : isCurrentActivePrayer
                             ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:bg-emerald-500/10 group-hover:text-emerald-500'
                     }">
-                        <i data-lucide="${isPrayed ? 'check-circle-2' : prayer.icon}" class="w-6 h-6"></i>
+                        <i data-lucide="${isPrayed ? 'check-circle-2' : isMissed ? 'x-circle' : prayer.icon}" class="w-6 h-6"></i>
                     </div>
 
                     <div class="space-y-1">
@@ -1611,6 +1705,8 @@ function renderPrayerList(changedPrayerId = null) {
                             <h4 class="font-bold text-base sm:text-lg ${
                                 isPrayed
                                     ? 'text-emerald-950 dark:text-emerald-200'
+                                    : isMissed
+                                    ? 'text-rose-950 dark:text-rose-200'
                                     : 'text-slate-900 dark:text-white'
                             }">
                                 ${prayer.name}
@@ -1619,6 +1715,8 @@ function renderPrayerList(changedPrayerId = null) {
                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-mono text-xs font-bold ${
                                 isPrayed
                                     ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200'
+                                    : isMissed
+                                    ? 'bg-rose-500/20 text-rose-800 dark:text-rose-200'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700'
                             }">
                                 <i data-lucide="clock" class="w-3 h-3"></i>
@@ -1639,14 +1737,28 @@ function renderPrayerList(changedPrayerId = null) {
                                     ? mode === 'kaza'
                                         ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                                         : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                    : isMissed
+                                    ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                             }">
-                                ${isPrayed ? (mode === 'kaza' ? '✓ Kaza İle Kılındı' : '✓ Kılındı') : 'Kılınmadı'}
+                                ${
+                                    isPrayed
+                                        ? mode === 'kaza'
+                                            ? '✓ Kaza İle Kılındı'
+                                            : '✓ Kılındı'
+                                        : isMissed
+                                        ? isKazaAdded
+                                            ? '✕ Kılınmadı • Kaza Borcuna Eklendi (+1)'
+                                            : '✕ Kılınmadı'
+                                        : 'Bekliyor'
+                                }
                             </span>
                         </div>
                         <p class="text-xs sm:text-sm ${
                             isPrayed
                                 ? 'text-emerald-700/80 dark:text-emerald-300/70'
+                                : isMissed
+                                ? 'text-rose-700/80 dark:text-rose-300/75'
                                 : 'text-slate-500 dark:text-slate-400'
                         }">
                             ${prayer.subtitle}
@@ -1654,7 +1766,7 @@ function renderPrayerList(changedPrayerId = null) {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 self-end sm:self-center">
+                <div class="flex flex-wrap items-center gap-2 self-end sm:self-center w-full sm:w-auto justify-end">
                     ${
                         isPrayed
                             ? `
@@ -1671,15 +1783,32 @@ function renderPrayerList(changedPrayerId = null) {
                             : ''
                     }
 
-                    <button type="button" data-toggle-prayer="${prayer.id}"
+                    <!-- KILDIM BUTONU (Parlak Yeşil) -->
+                    <button type="button"
+                        data-prayer-decision="prayed"
+                        data-prayer-id="${prayer.id}"
                         aria-pressed="${isPrayed}"
-                        class="min-w-[130px] px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                        class="flex-1 sm:flex-initial min-w-[112px] px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
                             isPrayed
-                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20'
-                                : 'bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-slate-800 dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700'
+                                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/35 ring-2 ring-emerald-400/60 border border-emerald-400'
+                                : 'bg-slate-100 hover:bg-emerald-500 hover:text-white dark:bg-slate-800 dark:hover:bg-emerald-500 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700'
                         }">
-                        <i data-lucide="${isPrayed ? 'check' : 'circle'}" class="w-4 h-4"></i>
-                        <span>${isPrayed ? 'Kılındı' : 'Kılınmadı'}</span>
+                        <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+                        <span>Kıldım</span>
+                    </button>
+
+                    <!-- KILMADIM BUTONU (Belirgin Kırmızı) -->
+                    <button type="button"
+                        data-prayer-decision="missed"
+                        data-prayer-id="${prayer.id}"
+                        aria-pressed="${isMissed}"
+                        class="flex-1 sm:flex-initial min-w-[112px] px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+                            isMissed
+                                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/35 ring-2 ring-rose-400/60 border border-rose-400'
+                                : 'bg-slate-100 hover:bg-rose-600 hover:text-white dark:bg-slate-800 dark:hover:bg-rose-600 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700'
+                        }">
+                        <i data-lucide="x-circle" class="w-4 h-4 shrink-0"></i>
+                        <span>Kılmadım</span>
                     </button>
                 </div>
             </div>
@@ -1698,7 +1827,7 @@ function renderPrayerList(changedPrayerId = null) {
     }
 }
 
-// Kaza Çetelesini Render Et
+// Kaza Çetelesini Render Et (Kaza Düşme Sistemi ile)
 function renderKazaSection() {
     const kazaListEl = document.getElementById('kazaList');
     kazaListEl.innerHTML = '';
@@ -1710,38 +1839,59 @@ function renderKazaSection() {
         totalKaza += count;
 
         const row = document.createElement('div');
-        row.className = 'py-3.5 flex items-center justify-between gap-4';
+        row.className = 'py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
         row.innerHTML = `
-            <div>
-                <h4 class="font-semibold text-sm sm:text-base text-slate-900 dark:text-white">${item.name}</h4>
+            <div class="space-y-0.5">
+                <div class="flex items-center gap-2">
+                    <h4 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">${item.name}</h4>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        count > 0
+                            ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
+                    }">
+                        ${count > 0 ? `${count} Vakit Borç` : 'Borç Yok ✓'}
+                    </span>
+                </div>
                 <p class="text-xs text-slate-500 dark:text-slate-400">${item.detail}</p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center justify-between sm:justify-end gap-2">
                 <button type="button" data-kaza-action="dec" data-kaza-id="${item.id}"
-                    class="w-9 h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold transition flex items-center justify-center"
-                    title="1 Kaza Kılındı (Düş)">
-                    -1
+                    ${count === 0 ? 'disabled' : ''}
+                    class="px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-1.5 active:scale-95 ${
+                        count > 0
+                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/25 cursor-pointer'
+                            : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-600 border border-slate-200/60 dark:border-slate-800 cursor-not-allowed'
+                    }"
+                    title="1 Kaza Kılındı (Borçtan Düş)">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+                    <span>Kaza Kılındı (-1)</span>
                 </button>
 
-                <span class="min-w-[60px] text-center font-extrabold text-base sm:text-lg ${
-                    count > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                <span class="min-w-[52px] text-center font-mono font-extrabold text-lg sm:text-xl ${
+                    count > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
                 }">
                     ${count}
                 </span>
 
                 <button type="button" data-kaza-action="inc" data-kaza-id="${item.id}"
-                    class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold transition flex items-center justify-center"
+                    class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-500/15 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-500/20 dark:hover:text-rose-400 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 font-bold text-xs sm:text-sm transition flex items-center justify-center active:scale-95"
                     title="1 Kaza Borcu Ekle">
-                    +1
+                    +1 Ekle
                 </button>
             </div>
         `;
         kazaListEl.appendChild(row);
     });
 
-    document.getElementById('totalKazaBadge').textContent = totalKaza;
-    document.getElementById('statTotalKaza').textContent = `${totalKaza} Vakit`;
+    const totalBadgeEl = document.getElementById('totalKazaBadge');
+    if (totalBadgeEl) totalBadgeEl.textContent = totalKaza;
+    const statTotalKazaEl = document.getElementById('statTotalKaza');
+    if (statTotalKazaEl) statTotalKazaEl.textContent = `${totalKaza} Vakit`;
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
 }
 
 // Genel İstatistikleri Güncelle
@@ -1785,6 +1935,7 @@ function renderStats() {
 // Tarih Değiştirme
 function setSelectedDate(dateKey) {
     state.selectedDate = dateKey;
+    autoSyncMissedPrayersToKaza();
     renderAll();
     syncPrayerTimings(false);
 }
@@ -1803,24 +1954,63 @@ function setSelectedCity(cityId) {
     scheduleCloudSync();
 }
 
-// Namaz Durumunu Değiştir
-function togglePrayerStatus(prayerId) {
+// Namaz Kararını Ayarla: 'prayed' (Kıldım) veya 'missed' (Kılmadım)
+function setPrayerDecision(prayerId, decision) {
     const record = getDayRecord(state.selectedDate);
-    record.prayers[prayerId] = !record.prayers[prayerId];
-    if (!record.mode) record.mode = {};
-    if (record.prayers[prayerId] && !record.mode[prayerId]) {
-        record.mode[prayerId] = 'eda';
-    }
+    const prayerObj = PRAYERS.find((p) => p.id === prayerId);
+    const prayerName = prayerObj ? prayerObj.name : 'Namaz';
 
-    if (record.prayers[prayerId]) {
+    if (decision === 'prayed') {
+        record.prayers[prayerId] = true;
+        record.missed[prayerId] = false;
+        if (!record.mode) record.mode = {};
+        if (!record.mode[prayerId]) {
+            record.mode[prayerId] = 'eda';
+        }
+
+        // Eğer bu vakit daha önce "Kılmadım" veya otomatik geçmiş vakit olarak kaza borcuna eklendiyse, borcu geri düş
+        if (record.kazaAdded[prayerId]) {
+            state.kazaCounts[prayerId] = Math.max(0, (state.kazaCounts[prayerId] || 0) - 1);
+            record.kazaAdded[prayerId] = false;
+            saveKazaCounts(false);
+            showToast(
+                `${prayerName} Kılındı ✓`,
+                'Vakit kılındı olarak işaretlendi ve kaza tablosundaki +1 borç otomatik düşüldü.',
+                'emerald'
+            );
+        }
+
         playSoftCheckSound();
+    } else if (decision === 'missed') {
+        record.prayers[prayerId] = false;
+        record.missed[prayerId] = true;
+
+        // Kaza borçları tablosuna bu günün ilgili vakti için henüz eklenmediyse otomatik +1 borç ekle
+        if (!record.kazaAdded[prayerId]) {
+            state.kazaCounts[prayerId] = (state.kazaCounts[prayerId] || 0) + 1;
+            record.kazaAdded[prayerId] = true;
+            saveKazaCounts(false);
+            showToast(
+                'Kaza Borcuna Eklendi (+1)',
+                `${prayerName} kaza namazı borçları tablonuza otomatik olarak +1 borç eklendi.`,
+                'amber'
+            );
+        }
     }
 
     saveDailyRecords(true);
     renderCalendarSection();
     renderProgressBar();
     renderPrayerList(prayerId);
+    renderKazaSection();
     renderStats();
+}
+
+// Namaz Durumunu Değiştir (Geriye dönük uyumluluk)
+function togglePrayerStatus(prayerId) {
+    const record = getDayRecord(state.selectedDate);
+    const nextDecision = record.prayers[prayerId] ? 'missed' : 'prayed';
+    setPrayerDecision(prayerId, nextDecision);
 }
 
 // Eda / Kaza Modunu Değiştir
@@ -1860,7 +2050,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=12', { updateViaCache: 'none' })
+            .register('./sw.js?v=13', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -3931,11 +4121,21 @@ function setupEventListeners() {
     // Tümünü Kılındı İşaretle & Sıfırla
     document.getElementById('markAllDoneBtn').addEventListener('click', () => {
         const record = getDayRecord(state.selectedDate);
+        let kazaChanged = false;
         PRAYERS.forEach((p) => {
             record.prayers[p.id] = true;
+            record.missed[p.id] = false;
             if (!record.mode) record.mode = {};
             if (!record.mode[p.id]) record.mode[p.id] = 'eda';
+            if (record.kazaAdded[p.id]) {
+                state.kazaCounts[p.id] = Math.max(0, (state.kazaCounts[p.id] || 0) - 1);
+                record.kazaAdded[p.id] = false;
+                kazaChanged = true;
+            }
         });
+        if (kazaChanged) {
+            saveKazaCounts(false);
+        }
         playSoftCheckSound();
         saveDailyRecords(true);
         renderAll();
@@ -3943,19 +4143,42 @@ function setupEventListeners() {
 
     document.getElementById('resetDayBtn').addEventListener('click', () => {
         const record = getDayRecord(state.selectedDate);
+        let kazaChanged = false;
+        if (!record.manualReset) record.manualReset = {};
         PRAYERS.forEach((p) => {
             record.prayers[p.id] = false;
+            record.missed[p.id] = false;
+            record.manualReset[p.id] = true;
+            if (record.kazaAdded[p.id]) {
+                state.kazaCounts[p.id] = Math.max(0, (state.kazaCounts[p.id] || 0) - 1);
+                record.kazaAdded[p.id] = false;
+                kazaChanged = true;
+            }
         });
+        if (kazaChanged) {
+            saveKazaCounts(false);
+        }
         saveDailyRecords(true);
         renderAll();
     });
 
-    // Namaz Kartları Tıklama
+    // Namaz Kartları Tıklama (Kıldım / Kılmadım & Eda / Kaza Modu)
     document.getElementById('prayerList').addEventListener('click', (e) => {
         const modeBtn = e.target.closest('[data-mode-toggle]');
         if (modeBtn) {
             e.stopPropagation();
             togglePrayerMode(modeBtn.getAttribute('data-mode-toggle'));
+            return;
+        }
+
+        const decisionBtn = e.target.closest('[data-prayer-decision]');
+        if (decisionBtn) {
+            e.stopPropagation();
+            const prayerId = decisionBtn.getAttribute('data-prayer-id');
+            const decision = decisionBtn.getAttribute('data-prayer-decision');
+            if (prayerId && decision) {
+                setPrayerDecision(prayerId, decision);
+            }
             return;
         }
 
@@ -4156,7 +4379,7 @@ function setupEventListeners() {
         startNewQuiz(false);
     });
 
-    // Kaza Çetelesi Artır / Azalt
+    // Kaza Çetelesi Artır / Azalt (Kaza Kılındı Düşme Sistemi)
     document.getElementById('kazaList').addEventListener('click', (e) => {
         const btn = e.target.closest('[data-kaza-action]');
         if (!btn) return;
@@ -4167,7 +4390,9 @@ function setupEventListeners() {
         if (action === 'inc') {
             state.kazaCounts[id] = current + 1;
         } else if (action === 'dec') {
+            if (current <= 0) return;
             state.kazaCounts[id] = Math.max(0, current - 1);
+            playSoftCheckSound();
         }
 
         saveKazaCounts(true);
@@ -4198,6 +4423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchLiveZekatRates(false);
     startNewQuiz(true);
     setupEventListeners();
+    autoSyncMissedPrayersToKaza();
     renderAll();
     updateLiveClockAndCountdown();
     setInterval(updateLiveClockAndCountdown, 1000);

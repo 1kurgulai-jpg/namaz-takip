@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="BakVakitGeldi">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="manifest.json?v=12">
+    <link rel="manifest" href="manifest.json?v=13">
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
@@ -55,7 +55,7 @@
     <!-- Canvas Confetti (Quiz 5/5 Kutlaması İçin) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-[100svh] w-full max-w-full transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
 
@@ -394,15 +394,20 @@
         <!-- SEKME 2: Kaza Namazı Çetelesi -->
         <section id="kazaSection" class="hidden space-y-4 w-full overflow-hidden">
             <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
-                        <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Kaza Namazı Borç & Takip Çetelesi</h3>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">
-                            Geçmişten kalan kaza namazlarınızı vakit bazında ekleyip kıldıkça düşebilirsiniz.
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white">Kaza Namazı Borç & Takip Çetelesi</h3>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                                Otomatik Borç Entegrasyonu Aktif
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            5 Vakit ekranında <strong class="text-rose-500">"Kılmadım"</strong> olarak işaretlenen veya kılınmadan geçen vakitler buraya otomatik borç eklenir. Geçmiş kazalarınızı kıldıkça <strong class="text-emerald-600 dark:text-emerald-400">"Kaza Kılındı (-1)"</strong> butonuyla borcunuzdan düşebilirsiniz.
                         </p>
                     </div>
                     <button id="addFullDayKazaBtn" type="button"
-                        class="self-start sm:self-auto px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold transition flex items-center gap-1.5">
+                        class="self-start sm:self-auto shrink-0 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold transition flex items-center gap-1.5">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i>
                         +1 Günlük Kaza Ekle
                     </button>
@@ -1263,6 +1268,6 @@
     </footer>
 
     <!-- Uygulama Scripti -->
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
 </body>
 </html>
