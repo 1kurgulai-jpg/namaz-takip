@@ -17,7 +17,8 @@ const STORAGE_KEYS = {
     DEVICE_UUID: 'bakvakitgeldi_device_uuid_v1',
     SOUND_ENABLED: 'bakvakitgeldi_sound_enabled_v1',
     SOUND_TONE: 'bakvakitgeldi_sound_tone_v1',
-    PWA_BANNER_DISMISSED: 'bakvakitgeldi_pwa_dismissed_v1'
+    PWA_BANNER_DISMISSED: 'bakvakitgeldi_pwa_dismissed_v1',
+    ZIKIR_STATE: 'bakvakitgeldi_zikir_state_v1'
 };
 
 // Firebase Firestore Bulut Yapılandırması (Varsayılan 공용 Firestore REST & Çok Katmanlı Bulut Yedekleme)
@@ -1858,7 +1859,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=9', { updateViaCache: 'none' })
+            .register('./sw.js?v=10', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -2764,49 +2765,311 @@ function showQuizResults() {
 }
 
 // ============================================================================
-// 9. SEKME GEÇİŞLERİ VE TÜM ARAYÜZ BAĞLANTILARI
+// 9. DİJİTAL ZİKİRMATİK MODÜLÜ (99.999 KAPASİTELİ & KALICI HAFIZALI)
+// ============================================================================
+
+const MAX_ZIKIR_COUNT = 99999;
+
+const ZIKIR_PRESETS = [
+    {
+        id: 'subhanallah',
+        title: 'Sübhânallah',
+        arabic: 'سُبْحَانَ اللّٰهِ',
+        meaning: "Allah'ı tüm eksikliklerden tenzih ederim.",
+        defaultTarget: 33
+    },
+    {
+        id: 'elhamdulillah',
+        title: 'Elhamdülillah',
+        arabic: 'اَلْحَمْدُ لِلّٰهِ',
+        meaning: "Hamd ve şükür yalnızca Allah'adır.",
+        defaultTarget: 33
+    },
+    {
+        id: 'allahuekber',
+        title: 'Allâhü Ekber',
+        arabic: 'اَللّٰهُ اَكْبَرُ',
+        meaning: 'Allah en büyüktür.',
+        defaultTarget: 33
+    },
+    {
+        id: 'kelimeitevhid',
+        title: 'Lâ ilâhe illallah',
+        arabic: 'لَا اِلٰهَ اِلَّا اللّٰهُ',
+        meaning: "Allah'tan başka ilah yoktur.",
+        defaultTarget: 100
+    },
+    {
+        id: 'estagfirullah',
+        title: 'Estağfirullah',
+        arabic: 'اَسْتَغْفِرُ اللّٰهَ الْعَظِيمَ',
+        meaning: "Yüce Allah'tan bağışlanma dilerim.",
+        defaultTarget: 100
+    },
+    {
+        id: 'salavat',
+        title: 'Salavat-ı Şerife',
+        arabic: 'اَللّٰهُمَّ صَلِّ عَلٰى سَيِّدِنَا مُحَمَّدٍ',
+        meaning: "Allah'ım! Efendimiz Muhammed'e (s.a.v.) salât ve selam eyle.",
+        defaultTarget: 100
+    },
+    {
+        id: 'serbest',
+        title: 'Serbest Sayaç',
+        arabic: 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ',
+        meaning: 'Dilediğiniz zikir ve tesbihat için 99.999 kapasiteli serbest sayaç.',
+        defaultTarget: 99999
+    }
+];
+
+const zikirState = {
+    count: 0,
+    target: 33,
+    presetId: 'subhanallah'
+};
+
+function loadZikirState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEYS.ZIKIR_STATE);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed.count === 'number' && !Number.isNaN(parsed.count)) {
+                zikirState.count = Math.max(0, Math.min(MAX_ZIKIR_COUNT, Math.floor(parsed.count)));
+            }
+            if (typeof parsed.target === 'number' && parsed.target > 0) {
+                zikirState.target = parsed.target;
+            }
+            if (typeof parsed.presetId === 'string' && ZIKIR_PRESETS.some((p) => p.id === parsed.presetId)) {
+                zikirState.presetId = parsed.presetId;
+            }
+        }
+    } catch (e) {
+        console.error('Zikirmatik hafızası okunamadı:', e);
+    }
+}
+
+function saveZikirState() {
+    try {
+        localStorage.setItem(
+            STORAGE_KEYS.ZIKIR_STATE,
+            JSON.stringify({
+                count: zikirState.count,
+                target: zikirState.target,
+                presetId: zikirState.presetId,
+                updatedAt: Date.now()
+            })
+        );
+    } catch (e) {
+        console.error('Zikirmatik hafızası kaydedilemedi:', e);
+    }
+}
+
+function renderZikirPresetPills() {
+    const container = document.getElementById('zikirPresetPills');
+    if (!container) return;
+
+    container.innerHTML = '';
+    ZIKIR_PRESETS.forEach((preset) => {
+        const isActive = preset.id === zikirState.presetId;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('data-zikir-preset', preset.id);
+        btn.className = isActive
+            ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition'
+            : 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition';
+        btn.textContent = preset.title;
+        container.appendChild(btn);
+    });
+}
+
+function renderZikirUI(animateCount = false) {
+    const countEl = document.getElementById('zikirCountDisplay');
+    const paddedEl = document.getElementById('zikirPaddedDisplay');
+    const cycleBadgeEl = document.getElementById('zikirCycleBadge');
+    const targetProgressTextEl = document.getElementById('zikirTargetProgressText');
+    const progressBarEl = document.getElementById('zikirProgressBar');
+    const targetSelectEl = document.getElementById('zikirTargetSelect');
+    const arabicEl = document.getElementById('zikirArabicText');
+    const titleEl = document.getElementById('zikirTitleText');
+    const meaningEl = document.getElementById('zikirMeaningText');
+
+    if (!countEl) return;
+
+    const preset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
+    if (arabicEl) arabicEl.textContent = preset.arabic;
+    if (titleEl) titleEl.textContent = preset.title;
+    if (meaningEl) meaningEl.textContent = preset.meaning;
+
+    if (targetSelectEl && String(targetSelectEl.value) !== String(zikirState.target)) {
+        targetSelectEl.value = String(zikirState.target);
+    }
+
+    const formattedCount = zikirState.count.toLocaleString('tr-TR');
+    countEl.textContent = formattedCount;
+
+    if (paddedEl) {
+        paddedEl.textContent = String(zikirState.count).padStart(5, '0');
+    }
+
+    const target = zikirState.target || 33;
+    const completedCycles = Math.floor(zikirState.count / target);
+    const currentInCycle = zikirState.count % target;
+    const displayInCycle = zikirState.count > 0 && currentInCycle === 0 ? target : currentInCycle;
+    const pct = Math.min(100, Math.round((displayInCycle / target) * 100));
+
+    if (cycleBadgeEl) {
+        cycleBadgeEl.textContent = `TAMAMLANAN TUR: ${completedCycles}`;
+    }
+    if (targetProgressTextEl) {
+        targetProgressTextEl.textContent =
+            target === MAX_ZIKIR_COUNT
+                ? `Kapasite: ${formattedCount} / 99.999`
+                : `Tur: ${displayInCycle} / ${target.toLocaleString('tr-TR')}`;
+    }
+    if (progressBarEl) {
+        progressBarEl.style.width = `${zikirState.count === 0 ? 0 : pct}%`;
+    }
+
+    if (animateCount) {
+        countEl.classList.remove('zikir-count-pop');
+        void countEl.offsetWidth;
+        countEl.classList.add('zikir-count-pop');
+
+        const tapBtn = document.getElementById('zikirTapBtn');
+        if (tapBtn) {
+            tapBtn.classList.remove('zikir-ripple-active');
+            void tapBtn.offsetWidth;
+            tapBtn.classList.add('zikir-ripple-active');
+        }
+    }
+}
+
+function incrementZikir() {
+    if (zikirState.count >= MAX_ZIKIR_COUNT) {
+        showToast(
+            'Maksimum Sınır (99.999)',
+            'Zikirmatik sayacı 99.999 üst sınırına ulaştı. Yeni başlangıç için sayacı sıfırlayabilirsiniz.',
+            'amber'
+        );
+        return;
+    }
+
+    zikirState.count += 1;
+    saveZikirState();
+    renderZikirUI(true);
+
+    // Sıfırlama onay kutusu açıksa kapat
+    document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
+
+    // Dokunsal geri bildirim (destekleyen mobil cihazlarda hafif titreşim)
+    const target = zikirState.target || 33;
+    if (target !== MAX_ZIKIR_COUNT && zikirState.count % target === 0) {
+        try {
+            navigator.vibrate?.([30, 45, 35]);
+        } catch (e) {
+            // ignore
+        }
+        playSoftCheckSound();
+        showToast(
+            'Tesbih Turu Tamamlandı ✨',
+            `${zikirState.count.toLocaleString('tr-TR')} zikre ulaştınız (${Math.floor(zikirState.count / target)}. tur). Allah kabul etsin.`,
+            'emerald'
+        );
+    } else {
+        try {
+            navigator.vibrate?.(10);
+        } catch (e) {
+            // ignore
+        }
+    }
+}
+
+function decrementZikir() {
+    if (zikirState.count <= 0) return;
+    zikirState.count = Math.max(0, zikirState.count - 1);
+    saveZikirState();
+    renderZikirUI(false);
+}
+
+function openZikirResetConfirm() {
+    const confirmBox = document.getElementById('zikirResetConfirmBox');
+    const confirmText = document.getElementById('zikirResetConfirmText');
+    if (!confirmBox) return;
+
+    if (zikirState.count === 0) {
+        showToast('Sayaç Zaten 0', 'Zikirmatik sayacı şu anda 0 durumunda.', 'emerald');
+        return;
+    }
+
+    if (confirmText) {
+        confirmText.innerHTML = `Mevcut zikir sayacınız (<strong>${zikirState.count.toLocaleString('tr-TR')}</strong>) <strong>0</strong> olarak sıfırlanacak. Emin misiniz?`;
+    }
+    confirmBox.classList.remove('hidden');
+}
+
+function confirmZikirReset() {
+    zikirState.count = 0;
+    saveZikirState();
+    renderZikirUI(false);
+    document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
+    showToast('Sayaç Sıfırlandı', 'Dijital Zikirmatik sayacı 0 olarak sıfırlandı.', 'emerald');
+}
+
+// ============================================================================
+// 10. SEKME GEÇİŞLERİ VE TÜM ARAYÜZ BAĞLANTILARI
 // ============================================================================
 
 function switchMainTab(tabName) {
     const tabs = {
         daily: {
             btn: document.getElementById('tabDailyBtn'),
-            section: document.getElementById('dailySection')
+            section: document.getElementById('dailySection'),
+            spanClass: 'col-span-2 sm:col-span-1 '
         },
         kaza: {
             btn: document.getElementById('tabKazaBtn'),
-            section: document.getElementById('kazaSection')
+            section: document.getElementById('kazaSection'),
+            spanClass: ''
         },
         qibla: {
             btn: document.getElementById('tabQiblaBtn'),
-            section: document.getElementById('qiblaSection')
+            section: document.getElementById('qiblaSection'),
+            spanClass: ''
         },
         surahs: {
             btn: document.getElementById('tabSurahsBtn'),
-            section: document.getElementById('surahsSection')
+            section: document.getElementById('surahsSection'),
+            spanClass: ''
         },
         zekat: {
             btn: document.getElementById('tabZekatBtn'),
-            section: document.getElementById('zekatSection')
+            section: document.getElementById('zekatSection'),
+            spanClass: ''
+        },
+        zikir: {
+            btn: document.getElementById('tabZikirBtn'),
+            section: document.getElementById('zikirSection'),
+            spanClass: ''
         },
         quiz: {
             btn: document.getElementById('tabQuizBtn'),
-            section: document.getElementById('quizSection')
+            section: document.getElementById('quizSection'),
+            spanClass: ''
         }
     };
 
-    const activeClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1.5';
-    const inactiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5';
+    const baseActiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1 sm:gap-1.5';
+    const baseInactiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 sm:gap-1.5';
 
     Object.keys(tabs).forEach((key) => {
         const item = tabs[key];
         if (!item.btn || !item.section) return;
         if (key === tabName) {
             item.section.classList.remove('hidden');
-            item.btn.className = activeClass;
+            item.btn.className = item.spanClass + baseActiveClass;
         } else {
             item.section.classList.add('hidden');
-            item.btn.className = inactiveClass;
+            item.btn.className = item.spanClass + baseInactiveClass;
         }
     });
 
@@ -2816,6 +3079,9 @@ function switchMainTab(tabName) {
         renderSurahList();
     } else if (tabName === 'zekat') {
         calculateZekat();
+    } else if (tabName === 'zikir') {
+        renderZikirPresetPills();
+        renderZikirUI(false);
     }
 
     if (window.scrollY > 40) {
@@ -2832,6 +3098,8 @@ function renderAll() {
     renderKazaSection();
     renderQiblaCompassUI();
     renderSurahList();
+    renderZikirPresetPills();
+    renderZikirUI(false);
     renderNotificationUI();
     renderStats();
 }
@@ -2986,13 +3254,49 @@ function setupEventListeners() {
         }, 1500);
     });
 
-    // Ana Sekme Geçişleri (6 Modül)
+    // Ana Sekme Geçişleri (7 Modül)
     document.getElementById('tabDailyBtn')?.addEventListener('click', () => switchMainTab('daily'));
     document.getElementById('tabKazaBtn')?.addEventListener('click', () => switchMainTab('kaza'));
     document.getElementById('tabQiblaBtn')?.addEventListener('click', () => switchMainTab('qibla'));
     document.getElementById('tabSurahsBtn')?.addEventListener('click', () => switchMainTab('surahs'));
     document.getElementById('tabZekatBtn')?.addEventListener('click', () => switchMainTab('zekat'));
+    document.getElementById('tabZikirBtn')?.addEventListener('click', () => switchMainTab('zikir'));
     document.getElementById('tabQuizBtn')?.addEventListener('click', () => switchMainTab('quiz'));
+
+    // Dijital Zikirmatik Etkileşimleri
+    document.getElementById('zikirTapBtn')?.addEventListener('click', incrementZikir);
+    document.getElementById('zikirDecBtn')?.addEventListener('click', decrementZikir);
+    document.getElementById('zikirResetBtn')?.addEventListener('click', openZikirResetConfirm);
+    document.getElementById('zikirResetConfirmBtn')?.addEventListener('click', confirmZikirReset);
+    document.getElementById('zikirResetCancelBtn')?.addEventListener('click', () => {
+        document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
+    });
+
+    document.getElementById('zikirTargetSelect')?.addEventListener('change', (e) => {
+        const val = Number(e.target.value);
+        if (val > 0) {
+            zikirState.target = val;
+            saveZikirState();
+            renderZikirUI(false);
+        }
+    });
+
+    document.getElementById('zikirPresetPills')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-zikir-preset]');
+        if (!btn) return;
+        const presetId = btn.getAttribute('data-zikir-preset');
+        const found = ZIKIR_PRESETS.find((p) => p.id === presetId);
+        if (found) {
+            zikirState.presetId = found.id;
+            zikirState.target = found.defaultTarget;
+            saveZikirState();
+            renderZikirPresetPills();
+            renderZikirUI(false);
+        }
+    });
+
+    window.addEventListener('beforeunload', saveZikirState);
+    window.addEventListener('pagehide', saveZikirState);
 
     // Sure & Dua Rehberi Etkileşimleri
     document.getElementById('surahSearchInput')?.addEventListener('input', (e) => {
@@ -3104,6 +3408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initDeviceUuid();
     loadFromStorage();
+    loadZikirState();
     initCitySelect();
     updateQiblaForSelectedCity();
     initPWA();
@@ -3117,4 +3422,5 @@ document.addEventListener('DOMContentLoaded', () => {
     syncPrayerTimings(false);
     restoreFromCloudIfNeeded(false);
 });
+
 
