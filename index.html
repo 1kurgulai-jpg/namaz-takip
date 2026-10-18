@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="BakVakitGeldi">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="manifest.json?v=11">
+    <link rel="manifest" href="manifest.json?v=12">
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
@@ -55,7 +55,7 @@
     <!-- Canvas Confetti (Quiz 5/5 Kutlaması İçin) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-[100svh] w-full max-w-full transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
 
@@ -131,43 +131,48 @@
             </div>
         </div>
 
-        <!-- En Üstte Sabitlenen Ana Sekmeler Çubuğu: 5 Vakit | Kaza | Kıble | Sure & Dua | Zekat | Zikirmatik | Dini Quiz -->
+        <!-- En Üstte Sabitlenen Ana Sekmeler Çubuğu: 5 Vakit | Kaza | Kıble | Sure & Dua | Özel Dualar | Zekat | Zikirmatik | Dini Quiz -->
         <nav aria-label="Ana Modüller" class="max-w-3xl w-full mx-auto px-3 sm:px-6 pb-2.5 pt-0.5">
-            <div id="mainTabsBar" class="w-full overflow-hidden bg-slate-200/80 dark:bg-slate-950/95 p-1 sm:p-1.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 grid grid-cols-4 sm:grid-cols-7 gap-1 sm:gap-1.5 shadow-inner">
+            <div id="mainTabsBar" class="w-full overflow-hidden bg-slate-200/80 dark:bg-slate-950/95 p-1 sm:p-1.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 grid grid-cols-4 sm:grid-cols-8 gap-1 sm:gap-1.5 shadow-inner">
                 <button id="tabDailyBtn" type="button"
-                    class="col-span-2 sm:col-span-1 min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1 sm:gap-1.5">
-                    <i data-lucide="list-checks" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1">
+                    <i data-lucide="list-checks" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0"></i>
                     <span class="truncate">5 Vakit</span>
                 </button>
                 <button id="tabKazaBtn" type="button"
-                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
-                    <i data-lucide="history" class="w-4 h-4 shrink-0"></i>
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+                    <i data-lucide="history" class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"></i>
                     <span class="truncate">Kaza</span>
-                    <span id="totalKazaBadge" class="px-1.5 py-0.2 text-[10px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">0</span>
+                    <span id="totalKazaBadge" class="px-1 py-0.2 text-[10px] rounded-full bg-slate-300/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">0</span>
                 </button>
                 <button id="tabQiblaBtn" type="button"
-                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 sm:gap-1.5">
-                    <i data-lucide="compass" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+                    <i data-lucide="compass" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0"></i>
                     <span class="truncate">Kıble</span>
                 </button>
                 <button id="tabSurahsBtn" type="button"
-                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 sm:gap-1.5">
-                    <i data-lucide="book-open" class="w-4 h-4 text-teal-500 shrink-0"></i>
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-500 shrink-0"></i>
                     <span class="truncate">Sure & Dua</span>
                 </button>
+                <button id="tabSpecialDuasBtn" type="button"
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+                    <i data-lucide="heart-handshake" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0"></i>
+                    <span class="truncate">Özel Dualar</span>
+                </button>
                 <button id="tabZekatBtn" type="button"
-                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 sm:gap-1.5">
-                    <i data-lucide="coins" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+                    <i data-lucide="coins" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0"></i>
                     <span class="truncate">Zekat</span>
                 </button>
                 <button id="tabZikirBtn" type="button"
-                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 sm:gap-1.5">
-                    <i data-lucide="fingerprint" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+                    <i data-lucide="fingerprint" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0"></i>
                     <span class="truncate">Zikirmatik</span>
                 </button>
                 <button id="tabQuizBtn" type="button"
-                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 sm:gap-1.5">
-                    <i data-lucide="sparkles" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    class="min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0"></i>
                     <span class="truncate">Dini Quiz</span>
                 </button>
             </div>
@@ -949,6 +954,208 @@
             </div>
         </section>
 
+        <!-- SEKME 8: Özel Dualar ve Zikir Rehberi (Kategori Ekranı + Dua Detayları + Duaya Özel Zikirmatik) -->
+        <section id="specialDuasSection" class="hidden space-y-4 w-full overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5 overflow-hidden">
+
+                <!-- EKRAN 1: Kategori Seçim Ekranı -->
+                <div id="specialDuasCategoriesView" class="space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                                    <i data-lucide="heart-handshake" class="w-5 h-5 text-rose-500 shrink-0"></i>
+                                    <span>Özel Dualar ve Zikir Rehberi</span>
+                                </h3>
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                    Duaya Özel Sayaç Entegreli
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                İhtiyacınız olan kategoriyi seçerek sahih dua ve zikirleri Arapçası, okunuşu, fazileti ve hedef sayacıyla okuyun.
+                            </p>
+                        </div>
+
+                        <button id="specialDuasShowAllBtn" type="button"
+                            class="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-xs font-bold transition flex items-center gap-1.5 shrink-0">
+                            <i data-lucide="layers" class="w-4 h-4 text-emerald-500"></i>
+                            <span>Tüm Duaları Gör</span>
+                        </button>
+                    </div>
+
+                    <!-- Kategori Kartları Grid -->
+                    <div id="specialDuaCategoriesGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- JS tarafından 6 kategori kartı doldurulacak -->
+                    </div>
+                </div>
+
+                <!-- EKRAN 2: Seçili Kategorideki Dua ve Zikir Listesi -->
+                <div id="specialDuasListView" class="hidden space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <button id="specialDuasBackToCategoriesBtn" type="button"
+                                class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shrink-0">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                                <span>Kategoriler</span>
+                            </button>
+                            <div class="min-w-0">
+                                <h3 id="specialDuasActiveCategoryTitle" class="font-bold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
+                                    Maddiyat & Rızık Duaları
+                                </h3>
+                                <p id="specialDuasActiveCategoryDesc" class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                                    Helal rızık, bereket ve borçlardan kurtulmak için okunacak dualar
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Kategori Hızlı Geçiş Menüsü -->
+                        <select id="specialDuasQuickCategorySelect" aria-label="Dua Kategorisi Seç"
+                            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+                            <!-- JS ile doldurulacak -->
+                        </select>
+                    </div>
+
+                    <!-- Dua & Zikir Kartları Listesi -->
+                    <div id="specialDuasCardsContainer" class="space-y-4">
+                        <!-- JS ile seçili kategorinin dua kartları buraya render edilir -->
+                    </div>
+                </div>
+
+                <!-- EKRAN 3: Duaya Özel Zikirmatik Ekranı -->
+                <div id="specialDuaCounterView" class="hidden space-y-4">
+                    <!-- Üst Bar: Listeye Dön + Ses & Titreşim Toggle -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <button id="specialDuaBackToListBtn" type="button"
+                            class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                            <span>Dua Listesine Dön</span>
+                        </button>
+
+                        <button id="specialDuaFeedbackToggleBtn" type="button"
+                            class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                            <span>Ses & Titreşim: Açık</span>
+                        </button>
+                    </div>
+
+                    <!-- Okunan Duanın Detay Kartı (Zikir Çekerken Okunabilmesi İçin) -->
+                    <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200/80 dark:border-slate-800 space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span id="specialDuaCounterCategoryBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                Kategori
+                            </span>
+                            <span id="specialDuaCounterTargetBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                Hedef: 33 Defa
+                            </span>
+                        </div>
+
+                        <h4 id="specialDuaCounterTitle" class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
+                            Dua Başlığı
+                        </h4>
+
+                        <!-- Arapça Yazılışı -->
+                        <div class="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/90 text-right">
+                            <p id="specialDuaCounterArabic" dir="rtl" lang="ar" class="font-arabic text-2xl sm:text-3xl leading-[2.1] text-emerald-600 dark:text-emerald-400">
+                                --
+                            </p>
+                        </div>
+
+                        <!-- Türkçe Okunuşu & Anlamı -->
+                        <div class="space-y-1.5 text-xs sm:text-sm">
+                            <p class="text-slate-700 dark:text-slate-200">
+                                <strong class="text-emerald-600 dark:text-emerald-400">Okunuşu:</strong>
+                                <span id="specialDuaCounterLatin" class="italic font-medium"></span>
+                            </p>
+                            <p class="text-slate-600 dark:text-slate-300">
+                                <strong class="text-slate-900 dark:text-white">Anlamı:</strong>
+                                <span id="specialDuaCounterMeaning"></span>
+                            </p>
+                            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800/70">
+                                <strong class="text-amber-600 dark:text-amber-400">Fazileti:</strong>
+                                <span id="specialDuaCounterVirtue"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Hedef Tamamlandığında Açılan Kutlama Mesajı -->
+                    <div id="specialDuaCelebrationBox" class="hidden p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-lg border border-emerald-400/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl shrink-0">
+                                🌟
+                            </div>
+                            <div>
+                                <h5 class="font-extrabold text-sm sm:text-base">
+                                    Elhamdülillah! Hedef Zikir Sayısı Tamamlandı 🤲
+                                </h5>
+                                <p id="specialDuaCelebrationSubtext" class="text-xs text-emerald-100 mt-0.5">
+                                    Bu duanın günlük hedefini tamamladınız. Yüce Allah kabul eylesin.
+                                </p>
+                            </div>
+                        </div>
+                        <button id="specialDuaRepeatBtn" type="button"
+                            class="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs transition shrink-0 shadow-sm">
+                            Baştan Tekrar Oku
+                        </button>
+                    </div>
+
+                    <!-- Duaya Özel Zikirmatik Konsolu -->
+                    <div class="bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/95 rounded-3xl p-5 sm:p-7 border border-emerald-500/30 shadow-xl flex flex-col items-center text-white relative overflow-hidden">
+                        <!-- Dijital Sayaç & Hedef Göstergesi -->
+                        <div class="w-full max-w-sm bg-slate-950/90 rounded-2xl p-4 sm:p-5 border-2 border-emerald-500/40 shadow-inner text-center space-y-2">
+                            <div class="flex items-center justify-between text-[11px] font-mono text-emerald-400/80">
+                                <span id="specialDuaStatusText">DEVAM EDİYOR</span>
+                                <span id="specialDuaRemainingText">KALAN: 33</span>
+                            </div>
+
+                            <div class="py-1 flex items-baseline justify-center gap-2">
+                                <span id="specialDuaCountDisplay" class="inline-block font-mono text-5xl sm:text-6xl font-extrabold tracking-wider text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.35)]">
+                                    0
+                                </span>
+                                <span id="specialDuaTargetSlashDisplay" class="font-mono text-xl sm:text-2xl font-bold text-slate-400">
+                                    / 33
+                                </span>
+                            </div>
+
+                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="specialDuaProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-200" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Büyük Dokunmatik Zikir Butonu -->
+                        <div class="my-6 flex flex-col items-center">
+                            <button id="specialDuaTapBtn" type="button" aria-label="Duayı Oku ve Sayacı Artır (+1)"
+                                class="zikir-tap-btn w-44 h-44 sm:w-48 sm:h-48 rounded-full bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-[0_0_45px_rgba(16,185,129,0.4)] border-[6px] border-emerald-200/80 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer">
+                                <i data-lucide="fingerprint" class="w-11 h-11 sm:w-13 sm:h-13 text-slate-950/90 stroke-[2.2]"></i>
+                                <span class="font-extrabold text-base sm:text-lg tracking-tight text-slate-950">OKU & DOKUN</span>
+                                <span class="px-3 py-0.5 rounded-full bg-slate-950/15 text-slate-950 font-mono text-xs font-extrabold">
+                                    +1 Zikir
+                                </span>
+                            </button>
+                            <p class="text-[11px] text-emerald-200/75 mt-2.5 text-center">
+                                Her okuyuşta dokunun; ilerlemeniz bu dua için otomatik kaydedilir.
+                            </p>
+                        </div>
+
+                        <!-- Alt Kontroller: -1 Düzelt & Sıfırla -->
+                        <div class="w-full max-w-sm flex items-center justify-between gap-3 pt-3 border-t border-white/10">
+                            <button id="specialDuaDecBtn" type="button"
+                                class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                                <i data-lucide="minus-circle" class="w-4 h-4 text-slate-400"></i>
+                                <span>-1 Düzelt</span>
+                            </button>
+
+                            <button id="specialDuaResetBtn" type="button"
+                                class="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1.5">
+                                <i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-400"></i>
+                                <span>Bu Duanın Sayacını Sıfırla</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
         <!-- Ezan Bildirimleri, Zarif Sesli Uyarı & Otomatik Bulut Yedekleme Durum Kartı -->
         <section class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full overflow-hidden">
             <!-- Ezan Vakti Bildirim & Zarif Ses Efekti Kartı -->
@@ -1056,6 +1263,6 @@
     </footer>
 
     <!-- Uygulama Scripti -->
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>

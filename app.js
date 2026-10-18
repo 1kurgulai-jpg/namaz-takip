@@ -18,7 +18,8 @@ const STORAGE_KEYS = {
     SOUND_ENABLED: 'bakvakitgeldi_sound_enabled_v1',
     SOUND_TONE: 'bakvakitgeldi_sound_tone_v1',
     PWA_BANNER_DISMISSED: 'bakvakitgeldi_pwa_dismissed_v1',
-    ZIKIR_STATE: 'bakvakitgeldi_zikir_state_v1'
+    ZIKIR_STATE: 'bakvakitgeldi_zikir_state_v1',
+    SPECIAL_DUAS_PROGRESS: 'bakvakitgeldi_special_duas_progress_v1'
 };
 
 // Firebase Firestore Bulut Yapılandırması (Varsayılan 공용 Firestore REST & Çok Katmanlı Bulut Yedekleme)
@@ -1859,7 +1860,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=11', { updateViaCache: 'none' })
+            .register('./sw.js?v=12', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -3123,60 +3124,674 @@ function confirmZikirReset() {
 }
 
 // ============================================================================
-// 10. SEKME GEÇİŞLERİ VE TÜM ARAYÜZ BAĞLANTILARI
+// 10. ÖZEL DUALAR VE ZİKİR REHBERİ MODÜLÜ (KATEGORİLER + DUAYA ÖZEL ZİKİRMATİK)
+// ============================================================================
+
+const SPECIAL_DUA_CATEGORIES = [
+    {
+        id: 'rizik',
+        title: 'Maddiyat, Rızık & Bereket',
+        shortTitle: 'Maddiyat & Rızık',
+        icon: 'coins',
+        colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/25',
+        desc: 'Helal kazanç, borçlardan kurtulma, iş açıklığı ve rızık bolluğu için okunan dualar.'
+    },
+    {
+        id: 'sifa',
+        title: 'Sağlık, Şifa & Afiyet',
+        shortTitle: 'Sağlık & Şifa',
+        icon: 'heart-pulse',
+        colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/25',
+        desc: 'Beden ve ruh sağlığı, ağrı ve hastalıklardan şifa bulmak için Peygamberimizin (s.a.v.) duaları.'
+    },
+    {
+        id: 'huzur',
+        title: 'Huzur, İnşirah & Sıkıntı',
+        shortTitle: 'Huzur & Sıkıntı',
+        icon: 'sparkles',
+        colorClass: 'text-teal-500 bg-teal-500/10 border-teal-500/25',
+        desc: 'Kalp ferahlığı, stres, kaygı, üzüntü ve darlıktan kurtulmak için tesirli zikirler.'
+    },
+    {
+        id: 'korunma',
+        title: 'Korunma, Nazar & Manevi Zırh',
+        shortTitle: 'Korunma & Nazar',
+        icon: 'shield-check',
+        colorClass: 'text-sky-500 bg-sky-500/10 border-sky-500/25',
+        desc: 'Kem gözlerden, nazardan, görünür-görünmez kaza ve şerlerden Allah’a sığınma duaları.'
+    },
+    {
+        id: 'ilim',
+        title: 'İlim, Zihin Açıklığı & Başarı',
+        shortTitle: 'İlim & Başarı',
+        icon: 'graduation-cap',
+        colorClass: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/25',
+        desc: 'Sınavlarda, çalışmalarda zihin açıklığı, kolay kavrama ve hayırlı başarı duaları.'
+    },
+    {
+        id: 'tovbe',
+        title: 'Tövbe, İstiğfar & Mağfiret',
+        shortTitle: 'Tövbe & İstiğfar',
+        icon: 'hand-heart',
+        colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/25',
+        desc: 'Günahların affı, kalp arınması ve manevi kapıların açılması için istiğfar zikirleri.'
+    }
+];
+
+const SPECIAL_DUAS_LIST = [
+    // 1. MADDİYAT & RIZIK
+    {
+        id: 'rizik-1',
+        categoryId: 'rizik',
+        title: 'Helal Rızık ve Borçtan Kurtulma Duası',
+        arabic: 'اَللّٰهُمَّ اكْفِنِى بِحَلَالِكَ عَنْ حَرَامِكَ وَاَغْنِنِى بِفَضْلِكَ عَمَّنْ سِوَاكَ',
+        latin: 'Allâhümmekfinî bihalâlike an harâmike ve ağninî bifadlike ammen sivâk.',
+        meaning: "Allah'ım! Bana helal rızkınla yetinmeyi nasip et ve beni haramlardan koru; lütfunla beni Senden başkasına muhtaç etme.",
+        virtue: 'Hz. Ali’nin (r.a.) rivayet ettiği bu dua, dağlar kadar borcu olan kimsenin bile Allah’ın izniyle borcundan kurtulmasına ve rızkının bereketlenmesine vesiledir (Tirmizî, Deavât, 110).',
+        targetCount: 7
+    },
+    {
+        id: 'rizik-2',
+        categoryId: 'rizik',
+        title: 'Yâ Rezzâk — Rızık Kapılarının Açılması Zikri',
+        arabic: 'يَا رَزَّاقُ ذَا الْقُوَّةِ الْمَتِينُ اُرْزُقْنِى',
+        latin: 'Yâ Rezzâku zel-kuvvetil-metîn urzuknî.',
+        meaning: 'Ey bütün mahlûkatın rızkını veren, sonsuz kudret ve kuvvet sahibi Allah’ım! Beni hayırlı ve bol rızıkla rızıklandır.',
+        virtue: 'Sabah namazından sonra veya iş başlangıcında okunması kazancın bereketlenmesine ve beklenmedik hayırlı rızık kapılarının açılmasına vesiledir.',
+        targetCount: 33
+    },
+    {
+        id: 'rizik-3',
+        categoryId: 'rizik',
+        title: 'Hz. Musa’nın (a.s.) Hayır ve Rızık Duası (Kasas, 24)',
+        arabic: 'رَبِّ اِنِّى لِمَا اَنْزَلْتَ اِلَىَّ مِنْ خَيْرٍ فَقِيرٌ',
+        latin: 'Rabbi innî limâ enzelte ileyye min hayrin fakîr.',
+        meaning: "Rabbim! Doğrusu bana indireceğin her hayra (rızka ve lütfa) son derece muhtacım.",
+        virtue: 'Hz. Musa (a.s.) Medyen’de yapayalnız ve imkânsız kaldığında bu duayı okumuş, hemen ardından hem yuva hem de helal iş ve rızka kavuşmuştur.',
+        targetCount: 41
+    },
+
+    // 2. SAĞLIK & ŞİFA
+    {
+        id: 'sifa-1',
+        categoryId: 'sifa',
+        title: 'Peygamber Efendimizin (s.a.v.) En Büyük Şifa Duası',
+        arabic: 'اَللّٰهُمَّ رَبَّ النَّاسِ اَذْهِبِ الْبَأْسَ اِشْفِ اَنْتَ الشَّافِى لَا شِفَاءَ اِلَّا شِفَاؤُكَ شِفَاءً لَا يُغَادِرُ سَقَمًا',
+        latin: 'Allâhümme Rabben-nâs, ezhibil-be’se, işfi ente’ş-Şâfî, lâ şifâe illâ şifâüke, şifâen lâ yuğâdiru sekamâ.',
+        meaning: 'Ey insanların Rabbi olan Allah’ım! Bu sıkıntıyı ve hastalığı gider. Şifa ver, çünkü gerçek şifa verici ancak Sensin. Senin şifandan başka şifa yoktur; hiçbir hastalık izi bırakmayacak eksiksiz bir şifa ihsan eyle.',
+        virtue: 'Buhârî ve Müslim’de geçen sahih hadise göre Peygamberimiz (s.a.v.) hastaları ziyaret ettiğinde sağ elini hastanın üzerine koyarak bu şifa duasını okurdu.',
+        targetCount: 7
+    },
+    {
+        id: 'sifa-2',
+        categoryId: 'sifa',
+        title: 'Ağrı ve Rahatsızlık İçin Okunacak Nebevî Şifa Duası',
+        arabic: 'اَعُوذُ بِاللّٰهِ وَقُدْرَتِهِ مِنْ شَرِّ مَا اَجِدُ وَاُحَاذِرُ',
+        latin: 'Eûzü billâhi ve kudretihî min şerri mâ ecidü ve ühâziru.',
+        meaning: 'Şu anda hissettiğim ve ileride çekinip korktuğum hastalığın/ağrının şerrinden Allah’a ve O’nun sonsuz kudretine sığınırım.',
+        virtue: 'Müslim’de rivayet edildiğine göre Efendimiz (s.a.v.), vücudunda bir ağrı hisseden sahabiye elini ağrıyan yere koyup 3 kez Besmele çektikten sonra 7 defa bu duayı okumasını tavsiye etmiştir.',
+        targetCount: 7
+    },
+    {
+        id: 'sifa-3',
+        categoryId: 'sifa',
+        title: 'Hz. Eyyûb’un (a.s.) Şifa ve Kurtuluş Duası (Enbiyâ, 83)',
+        arabic: 'رَبِّ اَنِّى مَسَّنِىَ الضُّرُّ وَاَنْتَ اَرْحَمُ الرَّاحِمِينَ',
+        latin: 'Rabbi ennî messeniyed-durru ve ente erhamür-râhimîn.',
+        meaning: 'Rabbim! Şüphesiz bana hastalık ve sıkıntı dokundu; Sen ise merhametlilerin en merhametlisisin.',
+        virtue: 'Ağır hastalıklar ve uzun süren dertlerden şifa bulmak için Hz. Eyyûb’un (a.s.) okuduğu ve Kur’ân-ı Kerîm’de icabet edildiği müjdelenen duadır.',
+        targetCount: 33
+    },
+
+    // 3. HUZUR & SIKINTI
+    {
+        id: 'huzur-1',
+        categoryId: 'huzur',
+        title: 'Hz. Yunus’un (a.s.) Sıkıntıdan Kurtuluş Zikri (Enbiyâ, 87)',
+        arabic: 'لَا اِلٰهَ اِلَّا اَنْتَ سُبْحَانَكَ اِنِّى كُنْتُ مِنَ الظَّالِمِينَ',
+        latin: 'Lâ ilâhe illâ ente sübhâneke innî küntü minez-zâlimîn.',
+        meaning: 'Senden başka hiçbir ilah yoktur. Seni bütün eksikliklerden tenzih ederim. Gerçekten ben nefsine zulmedenlerden oldum.',
+        virtue: 'Peygamber Efendimiz (s.a.v.): "Dertli ve sıkıntılı bir müslüman bu duayla Rabbine yönelirse, Allah mutlaka onun sıkıntısını giderir" buyurmuştur (Tirmizî, Deavât, 81).',
+        targetCount: 33
+    },
+    {
+        id: 'huzur-2',
+        categoryId: 'huzur',
+        title: 'Hasbünallâhü ve Ni’mel Vekîl (Tevekkül & Huzur Zikri)',
+        arabic: 'حَسْبُنَا اللّٰهُ وَنِعْمَ الْوَكِيلُ نِعْمَ الْمَوْلٰى وَنِعْمَ النَّصِيرُ',
+        latin: 'Hasbünallâhü ve ni’mel-vekîl, ni’mel-Mevlâ ve ni’men-nasîr.',
+        meaning: 'Allah bize yeter; O ne güzel vekildir! O ne güzel Mevlâ ve ne güzel yardımcıdır!',
+        virtue: 'Hz. İbrahim (a.s.) ateşe atılırken ve Peygamberimiz (s.a.v.) en zorlu anlarda bu zikri okumuş; kalbe tam güven, sükûnet ve cesaret veren en büyük tevekkül zikridir.',
+        targetCount: 33
+    },
+    {
+        id: 'huzur-3',
+        categoryId: 'huzur',
+        title: 'Üzüntü, Kaygı ve Kederden Kurtulma Duası',
+        arabic: 'يَا حَىُّ يَا قَيُّومُ بِرَحْمَتِكَ اَسْتَغِيثُ اَصْلِحْ لِى شَأْنِى كُلَّهُ وَلَا تَكِلْنِى اِلٰى نَفْسِى طَرْفَةَ عَيْنٍ',
+        latin: 'Yâ Hayyu yâ Kayyûm birahmetike esteğîsü, aslih lî şe’nî küllehû ve lâ tekilnî ilâ nefsî tarfete ayn.',
+        meaning: 'Ey diri olan (Hayy) ve her şeyi ayakta tutan (Kayyûm) Allah’ım! Rahmetinle yardımını diliyorum; bütün işlerimi yoluna koy ve beni göz açıp kapayıncaya kadar bile nefsime bırakma.',
+        virtue: 'Peygamber Efendimizin (s.a.v.) bir üzüntü veya darlıkla karşılaştığında devamlı okuduğu ve kızı Hz. Fâtıma’ya sabah-akşam okumasını tavsiye ettiği çok faziletli duadır.',
+        targetCount: 11
+    },
+
+    // 4. KORUNMA & NAZAR
+    {
+        id: 'korunma-1',
+        categoryId: 'korunma',
+        title: 'Sabah ve Akşam Kaza & Belalardan Korunma Duası',
+        arabic: 'بِسْمِ اللّٰهِ الَّذِى لَا يَضُرُّ مَعَ اسْمِهِ شَىْءٌ فِى الْاَرْضِ وَلَا فِى السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ',
+        latin: 'Bismillâhillezî lâ yedurru measmihî şey’ün fil-ardı ve lâ fis-semâi ve hüves-Semîul-Alîm.',
+        meaning: 'O Allah’ın adıyla ki, O’nun ismi sayesinde ne yerde ne de gökte hiçbir şey zarar veremez. O her şeyi işiten ve her şeyi hakkıyla bilendir.',
+        virtue: 'Hadis-i şerifte: "Kim sabah ve akşam 3 defa bu duayı okursa, kendisine hiçbir şey zarar veremez ve ani bir belaya uğramaz" buyrulmuştur (Ebû Dâvûd, Edeb, 101).',
+        targetCount: 3
+    },
+    {
+        id: 'korunma-2',
+        categoryId: 'korunma',
+        title: 'Nazar, Kem Göz ve Kötülüklerden Korunma Duası',
+        arabic: 'اَعُوذُ بِكَلِمَاتِ اللّٰهِ التَّامَّاتِ مِنْ كُلِّ شَيْطَانٍ وَهَامَّةٍ وَمِنْ كُلِّ عَيْنٍ لَامَّةٍ',
+        latin: 'Eûzü bikelimâtillâhit-tâmmâti min külli şeytânin ve hâmmetin ve min külli aynin lâmmeh.',
+        meaning: 'Her türlü şeytandan, zararlı haşereden ve değen her kem gözden (nazardan) Allah’ın eksiksiz tam kelimelerine sığınırım.',
+        virtue: 'Peygamber Efendimiz (s.a.v.) torunları Hz. Hasan ve Hz. Hüseyin’i nazardan ve kötülüklerden korumak için bu duayı okur ve "Atanız Hz. İbrahim de oğulları İsmail ve İshak’a bu duayı okurdu" buyururdu (Buhârî, Enbiyâ, 10).',
+        targetCount: 7
+    },
+
+    // 5. İLİM & BAŞARI
+    {
+        id: 'ilim-1',
+        categoryId: 'ilim',
+        title: 'Zihin Açıklığı, Kolaylık ve Başarı Duası (Tâhâ, 25-28)',
+        arabic: 'رَبِّ اشْرَحْ لِى صَدْرِى وَيَسِّرْ لِى اَمْرِى وَاحْلُلْ عُقْدَةً مِنْ لِسَانِى يَفْقَهُوا قَوْلِى',
+        latin: 'Rabbişrah lî sadrî ve yessir lî emrî vahlül ukdeten min lisânî yefkahû kavlî.',
+        meaning: 'Rabbim! Göğsüme genişlik (inşirah) ver, işimi bana kolaylaştır ve dilimdeki düğümü çöz ki sözümü iyi anlasınlar.',
+        virtue: 'Sınavlara girerken, önemli bir görüşme veya işe başlarken zihin açıklığı, özgüven ve işlerin kolaylaşması için okunan en faziletli Kur’ân duasıdır.',
+        targetCount: 7
+    },
+    {
+        id: 'ilim-2',
+        categoryId: 'ilim',
+        title: 'Rabbi Yessir — Hayırlı Başlangıç ve Kolaylık Duası',
+        arabic: 'رَبِّ يَسِّرْ وَلَا تُعَسِّرْ رَبِّ تَمِّمْ بِالْخَيْرِ وَزِدْنِى عِلْمًا وَفَهْمًا',
+        latin: 'Rabbi yessir ve lâ tuassir, Rabbi temmim bil-hayr, ve zidnî ilmen ve fehmâ.',
+        meaning: 'Rabbim! İşimi kolaylaştır, zorlaştırma. Rabbim! İşimi hayırla tamamla; ilmimi ve anlayışımı artır.',
+        virtue: 'Her türlü ders, iş ve hayırlı teşebbüsün başında okunması bereket ve başarıya vesile olur.',
+        targetCount: 11
+    },
+
+    // 6. TÖVBE & İSTİĞFAR
+    {
+        id: 'tovbe-1',
+        categoryId: 'tovbe',
+        title: 'Seyyidü’l-İstiğfar (İstiğfarların Efendisi)',
+        arabic: 'اَللّٰهُمَّ اَنْتَ رَبِّى لَا اِلٰهَ اِلَّا اَنْتَ خَلَقْتَنِى وَاَنَا عَبْدُكَ وَاَنَا عَلٰى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ اَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ اَبُوءُ لَكَ بِنِعْمَتِكَ عَلَىَّ وَاَبُوءُ بِذَنْبِى فَاغْفِرْ لِى فَاِنَّهُ لَا يَغْفِرُ الذُّنُوبَ اِلَّا اَنْتَ',
+        latin: "Allâhümme ente Rabbî lâ ilâhe illâ ente halaktenî ve ene abdüke ve ene alâ ahdike ve va'dike mesteta'tü, eûzü bike min şerri mâ sana'tü, ebûü leke bini'metike aleyye ve ebûü bizenbî fağfir lî feinnehû lâ yağfiruz-zünûbe illâ ente.",
+        meaning: "Allah'ım! Sen benim Rabbimsin, Senden başka ilah yoktur. Beni Sen yarattın ve ben Senin kulunum. Gücüm yettiğince Sana verdiğim söz ve vaad üzereyim. Yaptığım hataların şerrinden Sana sığınırım. Üzerimdeki nimetini itiraf eder, günahımı da kabul ederim. Beni bağışla; çünkü günahları Senden başka bağışlayacak hiç kimse yoktur.",
+        virtue: 'Peygamberimiz (s.a.v.): "Kim inanarak sabah ve akşam bu duayı okursa cennet ehli olur" buyurmuştur (Buhârî, Deavât, 2).',
+        targetCount: 3
+    },
+    {
+        id: 'tovbe-2',
+        categoryId: 'tovbe',
+        title: 'Günlük 100 İstiğfar Zikri',
+        arabic: 'اَسْتَغْفِرُ اللّٰهَ الْعَظِيمَ الَّذِى لَا اِلٰهَ اِلَّا هُوَ الْحَىُّ الْقَيُّومُ وَاَتُوبُ اِلَيْهِ',
+        latin: 'Estağfirullâhel-azîm ellezî lâ ilâhe illâ hüvel-Hayyül-Kayyûmü ve etûbü ileyh.',
+        meaning: 'Kendisinden başka ilah olmayan, daima diri (Hayy) ve her şeyi ayakta tutan (Kayyûm) Yüce Allah’tan bağışlanma diler ve O’na tövbe ederim.',
+        virtue: 'Peygamber Efendimiz (s.a.v.) günde 70 veya 100 defa istiğfar ettiğini bildirmiş; istiğfara devam eden kimseye Allah’ın her sıkıntıdan bir çıkış ve ummadığı yerden rızık vereceğini müjdelemiştir.',
+        targetCount: 100
+    }
+];
+
+const specialDuasState = {
+    view: 'categories', // 'categories' | 'list' | 'counter'
+    selectedCategoryId: 'rizik', // 'all' or categoryId
+    activeDuaId: 'rizik-1',
+    progressMap: {} // { [duaId]: number }
+};
+
+function loadSpecialDuasProgress() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEYS.SPECIAL_DUAS_PROGRESS);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                specialDuasState.progressMap = parsed;
+            }
+        }
+    } catch (e) {
+        console.error('Özel dualar sayaç hafızası okunamadı:', e);
+    }
+}
+
+function saveSpecialDuasProgress() {
+    try {
+        localStorage.setItem(STORAGE_KEYS.SPECIAL_DUAS_PROGRESS, JSON.stringify(specialDuasState.progressMap));
+    } catch (e) {
+        console.error('Özel dualar sayaç hafızası kaydedilemedi:', e);
+    }
+}
+
+function getSpecialDuaById(duaId) {
+    return SPECIAL_DUAS_LIST.find((d) => d.id === duaId) || SPECIAL_DUAS_LIST[0];
+}
+
+function getSpecialDuaCategoryById(catId) {
+    return SPECIAL_DUA_CATEGORIES.find((c) => c.id === catId) || SPECIAL_DUA_CATEGORIES[0];
+}
+
+function syncFeedbackToggleButtonsUI() {
+    const btnIds = ['zikirFeedbackToggleBtn', 'specialDuaFeedbackToggleBtn'];
+    btnIds.forEach((id) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        if (zikirState.feedbackEnabled) {
+            btn.className =
+                'px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer';
+            btn.innerHTML = `
+                <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                <span>Ses & Titreşim: Açık</span>
+            `;
+        } else {
+            btn.className =
+                'px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer';
+            btn.innerHTML = `
+                <i data-lucide="volume-x" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                <span>Ses & Titreşim: Kapalı</span>
+            `;
+        }
+    });
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+function renderSpecialDuasCategories() {
+    const grid = document.getElementById('specialDuaCategoriesGrid');
+    const quickSelect = document.getElementById('specialDuasQuickCategorySelect');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    SPECIAL_DUA_CATEGORIES.forEach((cat) => {
+        const duasInCat = SPECIAL_DUAS_LIST.filter((d) => d.categoryId === cat.id);
+        const completedCount = duasInCat.filter((d) => (specialDuasState.progressMap[d.id] || 0) >= d.targetCount).length;
+
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.setAttribute('data-open-dua-category', cat.id);
+        card.className =
+            'text-left p-4 sm:p-5 rounded-2xl bg-slate-50 hover:bg-emerald-50/50 dark:bg-slate-950/70 dark:hover:bg-slate-800/70 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/40 transition-all group flex items-start justify-between gap-3 shadow-sm cursor-pointer';
+
+        card.innerHTML = `
+            <div class="flex items-start gap-3.5 min-w-0">
+                <div class="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 ${cat.colorClass}">
+                    <i data-lucide="${cat.icon}" class="w-5 h-5"></i>
+                </div>
+                <div class="min-w-0 space-y-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h4 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
+                            ${cat.title}
+                        </h4>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            ${duasInCat.length} Dua
+                        </span>
+                        ${
+                            completedCount > 0
+                                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                    ${completedCount}/${duasInCat.length} Tamamlandı ✓
+                                   </span>`
+                                : ''
+                        }
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        ${cat.desc}
+                    </p>
+                </div>
+            </div>
+            <div class="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition shrink-0 mt-1">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </div>
+        `;
+
+        grid.appendChild(card);
+    });
+
+    if (quickSelect) {
+        quickSelect.innerHTML = `<option value="all">Tüm Kategoriler (${SPECIAL_DUAS_LIST.length} Dua)</option>` +
+            SPECIAL_DUA_CATEGORIES.map((c) => `<option value="${c.id}">${c.shortTitle}</option>`).join('');
+        quickSelect.value = specialDuasState.selectedCategoryId;
+    }
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+function renderSpecialDuasList() {
+    const container = document.getElementById('specialDuasCardsContainer');
+    const titleEl = document.getElementById('specialDuasActiveCategoryTitle');
+    const descEl = document.getElementById('specialDuasActiveCategoryDesc');
+    const quickSelect = document.getElementById('specialDuasQuickCategorySelect');
+
+    if (!container) return;
+
+    const catId = specialDuasState.selectedCategoryId;
+    if (quickSelect && quickSelect.value !== catId) {
+        quickSelect.value = catId;
+    }
+
+    if (catId === 'all') {
+        if (titleEl) titleEl.textContent = 'Tüm Özel Dualar ve Zikirler';
+        if (descEl) descEl.textContent = 'Rızık, şifa, huzur, korunma, ilim ve istiğfar dualarının tamamı';
+    } else {
+        const cat = getSpecialDuaCategoryById(catId);
+        if (titleEl) titleEl.textContent = cat.title;
+        if (descEl) descEl.textContent = cat.desc;
+    }
+
+    const filteredDuas = catId === 'all'
+        ? SPECIAL_DUAS_LIST
+        : SPECIAL_DUAS_LIST.filter((d) => d.categoryId === catId);
+
+    container.innerHTML = '';
+
+    filteredDuas.forEach((dua) => {
+        const cat = getSpecialDuaCategoryById(dua.categoryId);
+        const currentCount = specialDuasState.progressMap[dua.id] || 0;
+        const isDone = currentCount >= dua.targetCount;
+
+        const card = document.createElement('div');
+        card.className = `p-4 sm:p-5 rounded-2xl border transition-all space-y-3.5 ${
+            isDone
+                ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-500/40 shadow-sm'
+                : 'bg-slate-50/70 dark:bg-slate-950/60 border-slate-200/80 dark:border-slate-800'
+        }`;
+
+        card.innerHTML = `
+            <!-- Üst Bilgi: Kategori, Başlık ve Hedef Sayı Rozeti -->
+            <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="space-y-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${cat.colorClass}">
+                            ${cat.shortTitle}
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                            Hedef: ${dua.targetCount} Defa Okunacak
+                        </span>
+                        ${
+                            isDone
+                                ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white">
+                                    Hedef Tamamlandı (${currentCount}/${dua.targetCount}) ✓
+                                   </span>`
+                                : currentCount > 0
+                                ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                    Kaldığınız Yer: ${currentCount} / ${dua.targetCount}
+                                   </span>`
+                                : ''
+                        }
+                    </div>
+                    <h4 class="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white pt-0.5">
+                        ${dua.title}
+                    </h4>
+                </div>
+
+                <!-- Duaya Özel Zikre Başla Butonu -->
+                <button type="button" data-start-dua-zikir="${dua.id}"
+                    class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 shrink-0 cursor-pointer">
+                    <i data-lucide="fingerprint" class="w-4 h-4"></i>
+                    <span>${currentCount > 0 && !isDone ? `Zikre Devam Et (${currentCount}/${dua.targetCount})` : 'Zikre Başla (Sayaç)'}</span>
+                </button>
+            </div>
+
+            <!-- Arapça Yazılışı -->
+            <div class="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800/90 text-right">
+                <p dir="rtl" lang="ar" class="font-arabic text-2xl sm:text-3xl leading-[2.1] text-emerald-600 dark:text-emerald-400">
+                    ${dua.arabic}
+                </p>
+            </div>
+
+            <!-- Türkçe Okunuşu, Anlamı ve Fazileti -->
+            <div class="space-y-2 text-xs sm:text-sm">
+                <div class="p-3 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/70">
+                    <span class="font-bold text-emerald-600 dark:text-emerald-400 block text-[11px] uppercase tracking-wider mb-0.5">Türkçe Okunuşu</span>
+                    <p class="italic font-medium text-slate-800 dark:text-slate-200 leading-relaxed">${dua.latin}</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white/80 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/70">
+                    <span class="font-bold text-slate-900 dark:text-white block text-[11px] uppercase tracking-wider mb-0.5">Anlamı (Meali)</span>
+                    <p class="text-slate-600 dark:text-slate-300 leading-relaxed">${dua.meaning}</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20">
+                    <span class="font-bold text-amber-600 dark:text-amber-400 block text-[11px] uppercase tracking-wider mb-0.5">Fazileti & Okunma Adeti (${dua.targetCount} Defa)</span>
+                    <p class="text-slate-600 dark:text-slate-300 text-xs leading-relaxed">${dua.virtue}</p>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+function renderSpecialDuaCounterView(animateCount = false) {
+    const dua = getSpecialDuaById(specialDuasState.activeDuaId);
+    const cat = getSpecialDuaCategoryById(dua.categoryId);
+    const currentCount = specialDuasState.progressMap[dua.id] || 0;
+    const target = dua.targetCount;
+    const remaining = Math.max(0, target - currentCount);
+    const pct = Math.min(100, Math.round((currentCount / target) * 100));
+    const isCompleted = currentCount >= target;
+
+    const catBadgeEl = document.getElementById('specialDuaCounterCategoryBadge');
+    const targetBadgeEl = document.getElementById('specialDuaCounterTargetBadge');
+    const titleEl = document.getElementById('specialDuaCounterTitle');
+    const arabicEl = document.getElementById('specialDuaCounterArabic');
+    const latinEl = document.getElementById('specialDuaCounterLatin');
+    const meaningEl = document.getElementById('specialDuaCounterMeaning');
+    const virtueEl = document.getElementById('specialDuaCounterVirtue');
+
+    const statusTextEl = document.getElementById('specialDuaStatusText');
+    const remainingTextEl = document.getElementById('specialDuaRemainingText');
+    const countDisplayEl = document.getElementById('specialDuaCountDisplay');
+    const targetSlashEl = document.getElementById('specialDuaTargetSlashDisplay');
+    const progressBarEl = document.getElementById('specialDuaProgressBar');
+    const celebrationBoxEl = document.getElementById('specialDuaCelebrationBox');
+    const celebrationSubtextEl = document.getElementById('specialDuaCelebrationSubtext');
+
+    if (!countDisplayEl) return;
+
+    if (catBadgeEl) catBadgeEl.textContent = cat.title;
+    if (targetBadgeEl) targetBadgeEl.textContent = `Hedef: ${target} Defa`;
+    if (titleEl) titleEl.textContent = dua.title;
+    if (arabicEl) arabicEl.textContent = dua.arabic;
+    if (latinEl) latinEl.textContent = dua.latin;
+    if (meaningEl) meaningEl.textContent = dua.meaning;
+    if (virtueEl) virtueEl.textContent = dua.virtue;
+
+    countDisplayEl.textContent = currentCount.toLocaleString('tr-TR');
+    if (targetSlashEl) targetSlashEl.textContent = `/ ${target.toLocaleString('tr-TR')}`;
+    if (statusTextEl) {
+        statusTextEl.textContent = isCompleted ? 'HEDEF TAMAMLANDI ✨' : `İLERLEME: %${pct}`;
+    }
+    if (remainingTextEl) {
+        remainingTextEl.textContent = isCompleted ? 'ELHAMDÜLİLLAH ✓' : `KALAN: ${remaining}`;
+    }
+    if (progressBarEl) {
+        progressBarEl.style.width = `${pct}%`;
+    }
+
+    if (celebrationBoxEl) {
+        if (isCompleted) {
+            celebrationBoxEl.classList.remove('hidden');
+            if (celebrationSubtextEl) {
+                celebrationSubtextEl.textContent = `"${dua.title}" duasını ${target} defa okuyarak hedefi tamamladınız. Yüce Allah kabul eylesin.`;
+            }
+        } else {
+            celebrationBoxEl.classList.add('hidden');
+        }
+    }
+
+    syncFeedbackToggleButtonsUI();
+
+    if (animateCount) {
+        countDisplayEl.classList.remove('zikir-count-pop');
+        void countDisplayEl.offsetWidth;
+        countDisplayEl.classList.add('zikir-count-pop');
+
+        const tapBtn = document.getElementById('specialDuaTapBtn');
+        if (tapBtn) {
+            tapBtn.classList.remove('zikir-ripple-active');
+            void tapBtn.offsetWidth;
+            tapBtn.classList.add('zikir-ripple-active');
+        }
+    }
+}
+
+function setSpecialDuasSubView(viewName) {
+    specialDuasState.view = viewName;
+    const catView = document.getElementById('specialDuasCategoriesView');
+    const listView = document.getElementById('specialDuasListView');
+    const counterView = document.getElementById('specialDuaCounterView');
+
+    catView?.classList.toggle('hidden', viewName !== 'categories');
+    listView?.classList.toggle('hidden', viewName !== 'list');
+    counterView?.classList.toggle('hidden', viewName !== 'counter');
+
+    if (viewName === 'categories') {
+        renderSpecialDuasCategories();
+    } else if (viewName === 'list') {
+        renderSpecialDuasList();
+    } else if (viewName === 'counter') {
+        renderSpecialDuaCounterView(false);
+    }
+
+    if (window.scrollY > 40) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function openSpecialDuaCategory(categoryId) {
+    specialDuasState.selectedCategoryId = categoryId;
+    setSpecialDuasSubView('list');
+}
+
+function openSpecialDuaCounter(duaId) {
+    specialDuasState.activeDuaId = duaId;
+    setSpecialDuasSubView('counter');
+}
+
+function incrementSpecialDuaCount() {
+    const dua = getSpecialDuaById(specialDuasState.activeDuaId);
+    const current = specialDuasState.progressMap[dua.id] || 0;
+    const nextCount = Math.min(MAX_ZIKIR_COUNT, current + 1);
+    specialDuasState.progressMap[dua.id] = nextCount;
+    saveSpecialDuasProgress();
+
+    const justCompletedTarget = nextCount === dua.targetCount;
+    renderSpecialDuaCounterView(true);
+
+    if (zikirState.feedbackEnabled) {
+        playZikirClickSound(justCompletedTarget);
+        try {
+            if (justCompletedTarget) {
+                navigator.vibrate?.([40, 55, 50]);
+            } else {
+                navigator.vibrate?.(18);
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    if (justCompletedTarget) {
+        if (typeof window.confetti === 'function') {
+            window.confetti({
+                particleCount: 70,
+                spread: 65,
+                origin: { y: 0.65 }
+            });
+        }
+        showToast(
+            'Tebrikler! Dua Hedefi Tamamlandı 🤲',
+            `"${dua.title}" için ${dua.targetCount} adetlik okuma hedefini tamamladınız. Allah kabul etsin!`,
+            'emerald'
+        );
+    }
+}
+
+function decrementSpecialDuaCount() {
+    const dua = getSpecialDuaById(specialDuasState.activeDuaId);
+    const current = specialDuasState.progressMap[dua.id] || 0;
+    if (current <= 0) return;
+    specialDuasState.progressMap[dua.id] = Math.max(0, current - 1);
+    saveSpecialDuasProgress();
+    renderSpecialDuaCounterView(false);
+}
+
+function resetSpecialDuaCount() {
+    const dua = getSpecialDuaById(specialDuasState.activeDuaId);
+    specialDuasState.progressMap[dua.id] = 0;
+    saveSpecialDuasProgress();
+    renderSpecialDuaCounterView(false);
+    showToast('Dua Sayacı Sıfırlandı', `"${dua.title}" için sayaç 0 olarak sıfırlandı.`, 'emerald');
+}
+
+// ============================================================================
+// 11. SEKME GEÇİŞLERİ VE TÜM ARAYÜZ BAĞLANTILARI
 // ============================================================================
 
 function switchMainTab(tabName) {
     const tabs = {
         daily: {
             btn: document.getElementById('tabDailyBtn'),
-            section: document.getElementById('dailySection'),
-            spanClass: 'col-span-2 sm:col-span-1 '
+            section: document.getElementById('dailySection')
         },
         kaza: {
             btn: document.getElementById('tabKazaBtn'),
-            section: document.getElementById('kazaSection'),
-            spanClass: ''
+            section: document.getElementById('kazaSection')
         },
         qibla: {
             btn: document.getElementById('tabQiblaBtn'),
-            section: document.getElementById('qiblaSection'),
-            spanClass: ''
+            section: document.getElementById('qiblaSection')
         },
         surahs: {
             btn: document.getElementById('tabSurahsBtn'),
-            section: document.getElementById('surahsSection'),
-            spanClass: ''
+            section: document.getElementById('surahsSection')
+        },
+        specialDuas: {
+            btn: document.getElementById('tabSpecialDuasBtn'),
+            section: document.getElementById('specialDuasSection')
         },
         zekat: {
             btn: document.getElementById('tabZekatBtn'),
-            section: document.getElementById('zekatSection'),
-            spanClass: ''
+            section: document.getElementById('zekatSection')
         },
         zikir: {
             btn: document.getElementById('tabZikirBtn'),
-            section: document.getElementById('zikirSection'),
-            spanClass: ''
+            section: document.getElementById('zikirSection')
         },
         quiz: {
             btn: document.getElementById('tabQuizBtn'),
-            section: document.getElementById('quizSection'),
-            spanClass: ''
+            section: document.getElementById('quizSection')
         }
     };
 
-    const baseActiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1 sm:gap-1.5';
-    const baseInactiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 sm:gap-1.5';
+    const baseActiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm flex items-center gap-1';
+    const baseInactiveClass = 'min-h-[38px] sm:min-h-[42px] min-w-0 justify-center px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1';
 
     Object.keys(tabs).forEach((key) => {
         const item = tabs[key];
         if (!item.btn || !item.section) return;
         if (key === tabName) {
             item.section.classList.remove('hidden');
-            item.btn.className = item.spanClass + baseActiveClass;
+            item.btn.className = baseActiveClass;
         } else {
             item.section.classList.add('hidden');
-            item.btn.className = item.spanClass + baseInactiveClass;
+            item.btn.className = baseInactiveClass;
         }
     });
 
@@ -3184,6 +3799,8 @@ function switchMainTab(tabName) {
         renderQiblaCompassUI();
     } else if (tabName === 'surahs') {
         renderSurahList();
+    } else if (tabName === 'specialDuas') {
+        setSpecialDuasSubView(specialDuasState.view || 'categories');
     } else if (tabName === 'zekat') {
         calculateZekat();
     } else if (tabName === 'zikir') {
@@ -3205,8 +3822,10 @@ function renderAll() {
     renderKazaSection();
     renderQiblaCompassUI();
     renderSurahList();
+    renderSpecialDuasCategories();
     renderZikirPresetPills();
     renderZikirUI(false);
+    syncFeedbackToggleButtonsUI();
     renderNotificationUI();
     renderStats();
 }
@@ -3361,18 +3980,66 @@ function setupEventListeners() {
         }, 1500);
     });
 
-    // Ana Sekme Geçişleri (7 Modül)
+    // Ana Sekme Geçişleri (8 Modül)
     document.getElementById('tabDailyBtn')?.addEventListener('click', () => switchMainTab('daily'));
     document.getElementById('tabKazaBtn')?.addEventListener('click', () => switchMainTab('kaza'));
     document.getElementById('tabQiblaBtn')?.addEventListener('click', () => switchMainTab('qibla'));
     document.getElementById('tabSurahsBtn')?.addEventListener('click', () => switchMainTab('surahs'));
+    document.getElementById('tabSpecialDuasBtn')?.addEventListener('click', () => {
+        specialDuasState.view = 'categories';
+        switchMainTab('specialDuas');
+    });
     document.getElementById('tabZekatBtn')?.addEventListener('click', () => switchMainTab('zekat'));
     document.getElementById('tabZikirBtn')?.addEventListener('click', () => switchMainTab('zikir'));
     document.getElementById('tabQuizBtn')?.addEventListener('click', () => switchMainTab('quiz'));
 
+    // Özel Dualar ve Zikir Rehberi Etkileşimleri
+    document.getElementById('specialDuaCategoriesGrid')?.addEventListener('click', (e) => {
+        const catBtn = e.target.closest('[data-open-dua-category]');
+        if (!catBtn) return;
+        openSpecialDuaCategory(catBtn.getAttribute('data-open-dua-category'));
+    });
+
+    document.getElementById('specialDuasShowAllBtn')?.addEventListener('click', () => {
+        openSpecialDuaCategory('all');
+    });
+
+    document.getElementById('specialDuasBackToCategoriesBtn')?.addEventListener('click', () => {
+        setSpecialDuasSubView('categories');
+    });
+
+    document.getElementById('specialDuasQuickCategorySelect')?.addEventListener('change', (e) => {
+        if (e.target.value) {
+            openSpecialDuaCategory(e.target.value);
+        }
+    });
+
+    document.getElementById('specialDuasCardsContainer')?.addEventListener('click', (e) => {
+        const startBtn = e.target.closest('[data-start-dua-zikir]');
+        if (!startBtn) return;
+        openSpecialDuaCounter(startBtn.getAttribute('data-start-dua-zikir'));
+    });
+
+    document.getElementById('specialDuaBackToListBtn')?.addEventListener('click', () => {
+        setSpecialDuasSubView('list');
+    });
+
+    document.getElementById('specialDuaFeedbackToggleBtn')?.addEventListener('click', () => {
+        toggleZikirFeedback();
+        syncFeedbackToggleButtonsUI();
+    });
+
+    document.getElementById('specialDuaTapBtn')?.addEventListener('click', incrementSpecialDuaCount);
+    document.getElementById('specialDuaDecBtn')?.addEventListener('click', decrementSpecialDuaCount);
+    document.getElementById('specialDuaResetBtn')?.addEventListener('click', resetSpecialDuaCount);
+    document.getElementById('specialDuaRepeatBtn')?.addEventListener('click', resetSpecialDuaCount);
+
     // Dijital Zikirmatik Etkileşimleri
     document.getElementById('zikirTapBtn')?.addEventListener('click', incrementZikir);
-    document.getElementById('zikirFeedbackToggleBtn')?.addEventListener('click', toggleZikirFeedback);
+    document.getElementById('zikirFeedbackToggleBtn')?.addEventListener('click', () => {
+        toggleZikirFeedback();
+        syncFeedbackToggleButtonsUI();
+    });
     document.getElementById('zikirDecBtn')?.addEventListener('click', decrementZikir);
     document.getElementById('zikirResetBtn')?.addEventListener('click', openZikirResetConfirm);
     document.getElementById('zikirResetConfirmBtn')?.addEventListener('click', confirmZikirReset);
@@ -3403,8 +4070,14 @@ function setupEventListeners() {
         }
     });
 
-    window.addEventListener('beforeunload', saveZikirState);
-    window.addEventListener('pagehide', saveZikirState);
+    window.addEventListener('beforeunload', () => {
+        saveZikirState();
+        saveSpecialDuasProgress();
+    });
+    window.addEventListener('pagehide', () => {
+        saveZikirState();
+        saveSpecialDuasProgress();
+    });
 
     // Sure & Dua Rehberi Etkileşimleri
     document.getElementById('surahSearchInput')?.addEventListener('input', (e) => {
@@ -3517,6 +4190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDeviceUuid();
     loadFromStorage();
     loadZikirState();
+    loadSpecialDuasProgress();
     initCitySelect();
     updateQiblaForSelectedCity();
     initPWA();
@@ -3530,5 +4204,6 @@ document.addEventListener('DOMContentLoaded', () => {
     syncPrayerTimings(false);
     restoreFromCloudIfNeeded(false);
 });
+
 
 
