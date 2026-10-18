@@ -1859,7 +1859,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=10', { updateViaCache: 'none' })
+            .register('./sw.js?v=11', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -2825,8 +2825,67 @@ const ZIKIR_PRESETS = [
 const zikirState = {
     count: 0,
     target: 33,
-    presetId: 'subhanallah'
+    presetId: 'subhanallah',
+    feedbackEnabled: true
 };
+
+let zikirAudioCtx = null;
+
+// Zikirmatik butonuna her basıldığında Web Audio API ile üretilen zarif tesbih/tıklama sesi
+function playZikirClickSound(isCycleComplete = false) {
+    if (!zikirState.feedbackEnabled) return;
+
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+
+        if (!zikirAudioCtx) {
+            zikirAudioCtx = new AudioCtx();
+        }
+        if (zikirAudioCtx.state === 'suspended') {
+            zikirAudioCtx.resume();
+        }
+
+        const now = zikirAudioCtx.currentTime;
+
+        // 1. Zarif tesbih tanesi tıklama sesi (yumuşak ahşap/kristal tık efekti)
+        const clickOsc = zikirAudioCtx.createOscillator();
+        const clickGain = zikirAudioCtx.createGain();
+        clickOsc.type = 'triangle';
+        clickOsc.frequency.setValueAtTime(760, now);
+        clickOsc.frequency.exponentialRampToValueAtTime(290, now + 0.042);
+
+        clickGain.gain.setValueAtTime(0.0001, now);
+        clickGain.gain.linearRampToValueAtTime(0.11, now + 0.004);
+        clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+        clickOsc.connect(clickGain);
+        clickGain.connect(zikirAudioCtx.destination);
+        clickOsc.start(now);
+        clickOsc.stop(now + 0.05);
+
+        // 2. Tur tamamlandığında (örn. 33 / 99 / 100) ek zarif onay tınısı
+        if (isCycleComplete) {
+            const chimeNotes = [587.33, 880]; // D5 -> A5
+            chimeNotes.forEach((freq, idx) => {
+                const osc = zikirAudioCtx.createOscillator();
+                const gain = zikirAudioCtx.createGain();
+                osc.type = 'sine';
+                const start = now + 0.04 + idx * 0.1;
+                osc.frequency.setValueAtTime(freq, start);
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.linearRampToValueAtTime(0.09, start + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+                osc.connect(gain);
+                gain.connect(zikirAudioCtx.destination);
+                osc.start(start);
+                osc.stop(start + 0.38);
+            });
+        }
+    } catch (e) {
+        // ignore audio context restriction
+    }
+}
 
 function loadZikirState() {
     try {
@@ -2842,6 +2901,9 @@ function loadZikirState() {
             if (typeof parsed.presetId === 'string' && ZIKIR_PRESETS.some((p) => p.id === parsed.presetId)) {
                 zikirState.presetId = parsed.presetId;
             }
+            if (typeof parsed.feedbackEnabled === 'boolean') {
+                zikirState.feedbackEnabled = parsed.feedbackEnabled;
+            }
         }
     } catch (e) {
         console.error('Zikirmatik hafızası okunamadı:', e);
@@ -2856,11 +2918,30 @@ function saveZikirState() {
                 count: zikirState.count,
                 target: zikirState.target,
                 presetId: zikirState.presetId,
+                feedbackEnabled: zikirState.feedbackEnabled,
                 updatedAt: Date.now()
             })
         );
     } catch (e) {
         console.error('Zikirmatik hafızası kaydedilemedi:', e);
+    }
+}
+
+function toggleZikirFeedback() {
+    zikirState.feedbackEnabled = !zikirState.feedbackEnabled;
+    saveZikirState();
+    renderZikirUI(false);
+
+    if (zikirState.feedbackEnabled) {
+        playZikirClickSound(false);
+        try {
+            navigator.vibrate?.(20);
+        } catch (e) {
+            // ignore
+        }
+        showToast('Ses & Titreşim Açıldı', 'Zikir butonuna her basıldığında zarif tıklama sesi ve titreşim aktif.', 'emerald');
+    } else {
+        showToast('Ses & Titreşim Kapatıldı', 'Zikirmatik sessiz ve titreşimsiz moda alındı.', 'amber');
     }
 }
 
@@ -2892,8 +2973,31 @@ function renderZikirUI(animateCount = false) {
     const arabicEl = document.getElementById('zikirArabicText');
     const titleEl = document.getElementById('zikirTitleText');
     const meaningEl = document.getElementById('zikirMeaningText');
+    const feedbackBtn = document.getElementById('zikirFeedbackToggleBtn');
 
     if (!countEl) return;
+
+    // Ses & Titreşim Toggle Butonu Görünümü
+    if (feedbackBtn) {
+        if (zikirState.feedbackEnabled) {
+            feedbackBtn.className =
+                'px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer';
+            feedbackBtn.innerHTML = `
+                <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                <span>Ses & Titreşim: Açık</span>
+            `;
+        } else {
+            feedbackBtn.className =
+                'px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer';
+            feedbackBtn.innerHTML = `
+                <i data-lucide="volume-x" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                <span>Ses & Titreşim: Kapalı</span>
+            `;
+        }
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
 
     const preset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
     if (arabicEl) arabicEl.textContent = preset.arabic;
@@ -2961,26 +3065,29 @@ function incrementZikir() {
     // Sıfırlama onay kutusu açıksa kapat
     document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
 
-    // Dokunsal geri bildirim (destekleyen mobil cihazlarda hafif titreşim)
     const target = zikirState.target || 33;
-    if (target !== MAX_ZIKIR_COUNT && zikirState.count % target === 0) {
+    const isCycleComplete = target !== MAX_ZIKIR_COUNT && zikirState.count % target === 0;
+
+    // Ses & Titreşim Açık ise Web Audio API tıklama sesi ve titreşimi çalıştır
+    if (zikirState.feedbackEnabled) {
+        playZikirClickSound(isCycleComplete);
         try {
-            navigator.vibrate?.([30, 45, 35]);
+            if (isCycleComplete) {
+                navigator.vibrate?.([35, 50, 45]);
+            } else {
+                navigator.vibrate?.(18);
+            }
         } catch (e) {
             // ignore
         }
-        playSoftCheckSound();
+    }
+
+    if (isCycleComplete) {
         showToast(
             'Tesbih Turu Tamamlandı ✨',
             `${zikirState.count.toLocaleString('tr-TR')} zikre ulaştınız (${Math.floor(zikirState.count / target)}. tur). Allah kabul etsin.`,
             'emerald'
         );
-    } else {
-        try {
-            navigator.vibrate?.(10);
-        } catch (e) {
-            // ignore
-        }
     }
 }
 
@@ -3265,6 +3372,7 @@ function setupEventListeners() {
 
     // Dijital Zikirmatik Etkileşimleri
     document.getElementById('zikirTapBtn')?.addEventListener('click', incrementZikir);
+    document.getElementById('zikirFeedbackToggleBtn')?.addEventListener('click', toggleZikirFeedback);
     document.getElementById('zikirDecBtn')?.addEventListener('click', decrementZikir);
     document.getElementById('zikirResetBtn')?.addEventListener('click', openZikirResetConfirm);
     document.getElementById('zikirResetConfirmBtn')?.addEventListener('click', confirmZikirReset);

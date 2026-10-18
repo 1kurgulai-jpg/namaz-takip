@@ -4,13 +4,13 @@
  * - İnternet olmadığında çevrimdışı (Offline Cache) çalışmaya devam eder.
  */
 
-const CACHE_NAME = 'bakvakitgeldi-pwa-v10';
+const CACHE_NAME = 'bakvakitgeldi-pwa-v11';
 const CORE_ASSETS = [
     './',
     './index.html',
-    './style.css?v=10',
-    './app.js?v=10',
-    './manifest.json?v=10',
+    './style.css?v=11',
+    './app.js?v=11',
+    './manifest.json?v=11',
     './logo.png?v=2'
 ];
 
