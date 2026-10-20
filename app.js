@@ -2252,7 +2252,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=14', { updateViaCache: 'none' })
+            .register('./sw.js?v=15', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -3224,21 +3224,55 @@ const zikirState = {
 };
 
 let zikirAudioCtx = null;
+let iosHapticLabelEl = null;
 
-// Zikirmatik dokunma hissi / titreşim (Sessiz modda bile hafif haptic geri bildirim sağlar)
+// iPhone (iOS Safari / PWA) Taptic Engine donanımsal titreşim tetikleyicisi (<input type="checkbox" switch>)
+function triggerIosTapticEngine() {
+    try {
+        if (!iosHapticLabelEl) {
+            const wrapper = document.createElement('div');
+            wrapper.setAttribute('aria-hidden', 'true');
+            wrapper.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.id = 'bakvakit_ios_haptic_switch';
+            input.setAttribute('switch', '');
+            const label = document.createElement('label');
+            label.htmlFor = 'bakvakit_ios_haptic_switch';
+            wrapper.appendChild(input);
+            wrapper.appendChild(label);
+            document.body.appendChild(wrapper);
+            iosHapticLabelEl = label;
+        }
+        iosHapticLabelEl.click();
+    } catch (e) {
+        // ignore
+    }
+}
+
+// Zikirmatik dokunma hissi / titreşim (Hem Android navigator.vibrate hem iPhone Taptic Engine destekli)
 function triggerZikirHaptic(isMilestone = false) {
     if (zikirState.vibrationEnabled === false) return;
+
+    let vibratedViaApi = false;
     try {
         if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            // Android motorlarının fiziksel olarak net hissedilmesi için 45-55ms darbe süresi gerekir (14ms motoru döndürmeye yetmez)
             if (isMilestone) {
-                navigator.vibrate(zikirState.feedbackEnabled ? [35, 50, 45] : [25, 40, 30]);
+                vibratedViaApi = Boolean(navigator.vibrate([70, 50, 85]));
             } else {
-                // Sessiz modda hafif ve kısa dokunma hissi (14ms), sesli modda 18ms
-                navigator.vibrate(zikirState.feedbackEnabled ? 18 : 14);
+                vibratedViaApi = Boolean(navigator.vibrate(50));
             }
         }
     } catch (e) {
-        // Cihaz veya tarayıcı titreşimi desteklemiyorsa sessizce geç
+        // ignore
+    }
+
+    // iOS / iPhone cihazlarda navigator.vibrate bulunmadığı için Taptic Engine switch tetikleyicisini çalıştır
+    const isIosDevice = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '') ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!vibratedViaApi || isIosDevice) {
+        triggerIosTapticEngine();
     }
 }
 
@@ -3409,7 +3443,9 @@ function renderZikirUI(animateCount = false) {
 
     if (!countEl) return;
 
-    syncFeedbackToggleButtonsUI();
+    if (!animateCount) {
+        syncFeedbackToggleButtonsUI();
+    }
 
     const preset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
     if (arabicEl) arabicEl.textContent = preset.arabic;
@@ -3470,23 +3506,23 @@ function incrementZikir() {
         return;
     }
 
-    zikirState.count += 1;
+    const nextCount = zikirState.count + 1;
+    const target = zikirState.target || 33;
+    const isCycleComplete = target !== MAX_ZIKIR_COUNT && nextCount % target === 0;
+
+    // 1. ÖNCE doğrudan kullanıcı dokunuşu (user gesture) içinde titreşimi ve sesi tetikle (tarayıcı engeline takılmaması için)
+    triggerZikirHaptic(isCycleComplete);
+    if (zikirState.feedbackEnabled) {
+        playZikirClickSound(isCycleComplete);
+    }
+
+    // 2. Ardından sayacı artır, kaydet ve ekranı güncelle
+    zikirState.count = nextCount;
     saveZikirState();
     renderZikirUI(true);
 
     // Sıfırlama onay kutusu açıksa kapat
     document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
-
-    const target = zikirState.target || 33;
-    const isCycleComplete = target !== MAX_ZIKIR_COUNT && zikirState.count % target === 0;
-
-    // Sessiz modda bile hafif dokunma hissi / titreşim (haptic) çalışır (Titreşim anahtarı açık olduğu sürece)
-    triggerZikirHaptic(isCycleComplete);
-
-    // Ses Açık ise Web Audio API tıklama sesini çalıştır
-    if (zikirState.feedbackEnabled) {
-        playZikirClickSound(isCycleComplete);
-    }
 
     if (isCycleComplete) {
         showToast(
@@ -4062,7 +4098,9 @@ function renderSpecialDuaCounterView(animateCount = false) {
         }
     }
 
-    syncFeedbackToggleButtonsUI();
+    if (!animateCount) {
+        syncFeedbackToggleButtonsUI();
+    }
 
     if (animateCount) {
         countDisplayEl.classList.remove('zikir-count-pop');
@@ -4115,18 +4153,18 @@ function incrementSpecialDuaCount() {
     const dua = getSpecialDuaById(specialDuasState.activeDuaId);
     const current = specialDuasState.progressMap[dua.id] || 0;
     const nextCount = Math.min(MAX_ZIKIR_COUNT, current + 1);
-    specialDuasState.progressMap[dua.id] = nextCount;
-    saveSpecialDuasProgress();
-
     const justCompletedTarget = nextCount === dua.targetCount;
-    renderSpecialDuaCounterView(true);
 
-    // Sessiz modda bile hafif dokunma hissi / titreşim (haptic) çalışır
+    // 1. ÖNCE doğrudan kullanıcı dokunuşu (user gesture) içinde titreşimi ve sesi tetikle
     triggerZikirHaptic(justCompletedTarget);
-
     if (zikirState.feedbackEnabled) {
         playZikirClickSound(justCompletedTarget);
     }
+
+    // 2. Ardından sayacı kaydet ve ekranı güncelle
+    specialDuasState.progressMap[dua.id] = nextCount;
+    saveSpecialDuasProgress();
+    renderSpecialDuaCounterView(true);
 
     if (justCompletedTarget) {
         if (typeof window.confetti === 'function') {
