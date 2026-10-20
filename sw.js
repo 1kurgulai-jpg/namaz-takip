@@ -4,15 +4,68 @@
  * - İnternet olmadığında çevrimdışı (Offline Cache) çalışmaya devam eder.
  */
 
-const CACHE_NAME = 'bakvakitgeldi-pwa-v13';
+const CACHE_NAME = 'bakvakitgeldi-pwa-v14';
 const CORE_ASSETS = [
     './',
     './index.html',
-    './style.css?v=13',
-    './app.js?v=13',
-    './manifest.json?v=13',
+    './style.css?v=14',
+    './app.js?v=14',
+    './manifest.json?v=14',
     './logo.png?v=2'
 ];
+
+let swPrayerSchedule = null;
+
+const SW_VAKIT_META = [
+    { key: 'imsak', label: 'İmsak (Sabah)', notifTitle: 'Sabah Namazı Vakti Girdi' },
+    { key: 'gunes', label: 'Güneş', notifTitle: 'Güneş Doğdu (Sabah Vakti Çıktı)' },
+    { key: 'ogle', label: 'Öğle', notifTitle: 'Öğle Namazı Vakti Girdi' },
+    { key: 'ikindi', label: 'İkindi', notifTitle: 'İkindi Namazı Vakti Girdi' },
+    { key: 'aksam', label: 'Akşam', notifTitle: 'Akşam Namazı Vakti Girdi' },
+    { key: 'yatsi', label: 'Yatsı', notifTitle: 'Yatsı Namazı Vakti Girdi' }
+];
+
+function swTimeStrToMinutes(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') return -1;
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return -1;
+    return Number(parts[0]) * 60 + Number(parts[1]);
+}
+
+function checkSwPrayerSchedule() {
+    if (!swPrayerSchedule || !swPrayerSchedule.notificationsEnabled || !swPrayerSchedule.todayTimings) {
+        return;
+    }
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (swPrayerSchedule.todayKey !== todayKey) return;
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    SW_VAKIT_META.forEach((v) => {
+        const vakitHM = swPrayerSchedule.todayTimings[v.key];
+        if (!vakitHM) return;
+        const vakitMin = swTimeStrToMinutes(vakitHM);
+        if (vakitMin < 0) return;
+
+        const diff = nowMinutes - vakitMin;
+        const logKey = `${todayKey}_${swPrayerSchedule.cityId}_${v.key}`;
+
+        if (diff >= 0 && diff <= 20 && !swPrayerSchedule.notifiedLog[logKey]) {
+            swPrayerSchedule.notifiedLog[logKey] = true;
+            if (self.registration && typeof self.registration.showNotification === 'function') {
+                self.registration.showNotification(`BakVakitGeldi — ${v.notifTitle}`, {
+                    body: `${swPrayerSchedule.cityName} için ${v.label} vakti girdi (${vakitHM}). Haydi namaza!`,
+                    icon: 'logo.png?v=2',
+                    badge: 'logo.png?v=2',
+                    tag: `bakvakitgeldi-ezan-${logKey}`,
+                    renotify: true,
+                    vibrate: [200, 100, 200]
+                }).catch(() => null);
+            }
+        }
+    });
+}
 
 // Kurulum: Beklemeden yeni Service Worker'ı devreye al
 self.addEventListener('install', (event) => {
@@ -22,10 +75,14 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// İstemciden gelen SKIP_WAITING mesajını dinle
+// İstemciden gelen SKIP_WAITING ve SYNC_PRAYER_SCHEDULE mesajlarını dinle
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
+    if (!event.data) return;
+    if (event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
+    } else if (event.data.type === 'SYNC_PRAYER_SCHEDULE') {
+        swPrayerSchedule = event.data;
+        checkSwPrayerSchedule();
     }
 });
 

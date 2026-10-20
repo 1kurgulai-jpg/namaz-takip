@@ -863,38 +863,208 @@ function showToast(title, message, color = 'emerald') {
     }, 5000);
 }
 
+function requestBrowserNotificationPermission() {
+    if (!('Notification' in window)) return Promise.resolve('unsupported');
+    if (Notification.permission === 'granted' || Notification.permission === 'denied') {
+        return Promise.resolve(Notification.permission);
+    }
+    return new Promise((resolve) => {
+        try {
+            const maybePromise = Notification.requestPermission((perm) => {
+                resolve(perm);
+            });
+            if (maybePromise && typeof maybePromise.then === 'function') {
+                maybePromise.then(resolve).catch(() => resolve(Notification.permission));
+            }
+        } catch (e) {
+            resolve(Notification.permission || 'default');
+        }
+    });
+}
+
 function sendEzanNotification(title, bodyText, forceSound = false) {
     playGentleNotificationChime(forceSound);
     showToast(title, bodyText, 'emerald');
 
-    if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+        navigator.vibrate?.([180, 90, 180]);
+    } catch (e) {
+        // ignore
+    }
+
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        return;
+    }
+
+    const notifTitle = `BakVakitGeldi — ${title}`;
+    const notifOptions = {
+        body: bodyText,
+        icon: 'logo.png?v=2',
+        badge: 'logo.png?v=2',
+        tag: `bakvakitgeldi-ezan-${Date.now()}`,
+        renotify: true,
+        requireInteraction: false,
+        vibrate: [200, 100, 200]
+    };
+
+    try {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker
+                .getRegistration()
+                .then((reg) => {
+                    if (reg && typeof reg.showNotification === 'function') {
+                        return reg.showNotification(notifTitle, notifOptions);
+                    }
+                    if (navigator.serviceWorker.ready) {
+                        return navigator.serviceWorker.ready.then((readyReg) =>
+                            readyReg.showNotification(notifTitle, notifOptions)
+                        );
+                    }
+                    throw new Error('No SW registration');
+                })
+                .catch(() => {
+                    try {
+                        new Notification(notifTitle, notifOptions);
+                    } catch (err) {
+                        // Mobil tarayıcılarda SW harici Notification kısıtlaması
+                    }
+                });
+        } else {
+            new Notification(notifTitle, notifOptions);
+        }
+    } catch (e) {
+        // Mobil tarayıcı kısıtlaması varsa uygulama içi bildirim zaten gösterildi
+    }
+}
+
+// Bildirim ilk açıldığında veya sayfa ilk yüklendiğinde çoktan geçmiş vakitleri (3 dk'dan eski) işaretle
+function markAlreadyPastVakitsForToday(graceMinutes = 3) {
+    if (!state.todayTimings) return;
+    const now = new Date();
+    const todayKey = toDateKey(now);
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let changed = false;
+
+    SIX_VAKIT_META.forEach((v) => {
+        const vakitHM = state.todayTimings[v.key];
+        if (!vakitHM) return;
+        const vakitMinutes = timeStrToMinutes(vakitHM);
+        const logKey = `${todayKey}_${state.selectedCity}_${v.key}`;
+
+        if (nowMinutes - vakitMinutes > graceMinutes && !state.notifiedLog[logKey]) {
+            state.notifiedLog[logKey] = true;
+            changed = true;
+        }
+    });
+
+    if (changed) {
         try {
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.ready.then((reg) => {
-                    reg.showNotification(`BakVakitGeldi — ${title}`, {
-                        body: bodyText,
-                        icon: 'logo.png',
-                        badge: 'logo.png',
-                        tag: `bakvakitgeldi-${Date.now()}`
-                    });
-                }).catch(() => {
-                    new Notification(`BakVakitGeldi — ${title}`, {
-                        body: bodyText,
-                        icon: 'logo.png',
-                        tag: `bakvakitgeldi-${Date.now()}`
-                    });
-                });
-            } else {
-                new Notification(`BakVakitGeldi — ${title}`, {
-                    body: bodyText,
-                    icon: 'logo.png',
-                    tag: `bakvakitgeldi-${Date.now()}`
-                });
-            }
+            localStorage.setItem(STORAGE_KEYS.NOTIFIED_LOG, JSON.stringify(state.notifiedLog));
         } catch (e) {
-            // Mobil tarayıcı kısıtlaması varsa toast zaten gösterildi
+            // ignore
         }
     }
+}
+
+// Service Worker ile güncel vakit tablosunu ve bildirim durumunu paylaş
+function syncNotificationScheduleWithSW() {
+    if (!('serviceWorker' in navigator) || !state.todayTimings) return;
+    const payload = {
+        type: 'SYNC_PRAYER_SCHEDULE',
+        notificationsEnabled: Boolean(state.notificationsEnabled),
+        cityId: state.selectedCity,
+        cityName: getCityById(state.selectedCity).name,
+        todayKey: toDateKey(new Date()),
+        todayTimings: state.todayTimings,
+        notifiedLog: state.notifiedLog || {}
+    };
+
+    navigator.serviceWorker
+        .getRegistration()
+        .then((reg) => {
+            const targetWorker = reg?.active || navigator.serviceWorker.controller;
+            if (targetWorker) {
+                targetWorker.postMessage(payload);
+            }
+        })
+        .catch(() => null);
+}
+
+let exactVakitTimeoutId = null;
+let bgNotificationWorker = null;
+
+// Sıradaki ezan vaktinin tam saniyesine özel hassas zamanlayıcı kur
+function scheduleNextExactVakitTimer() {
+    if (exactVakitTimeoutId) {
+        clearTimeout(exactVakitTimeoutId);
+        exactVakitTimeoutId = null;
+    }
+    if (!state.notificationsEnabled || !state.todayTimings) return;
+
+    const now = new Date();
+    const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    let nextTargetSec = null;
+
+    for (let i = 0; i < SIX_VAKIT_META.length; i++) {
+        const v = SIX_VAKIT_META[i];
+        const hm = state.todayTimings[v.key];
+        if (!hm) continue;
+        const sec = timeStrToMinutes(hm) * 60;
+        if (sec > nowSeconds) {
+            nextTargetSec = sec;
+            break;
+        }
+    }
+
+    if (nextTargetSec !== null) {
+        const delayMs = Math.max(500, (nextTargetSec - nowSeconds) * 1000 + 250);
+        exactVakitTimeoutId = setTimeout(() => {
+            checkPrayerTimeNotificationTrigger(new Date());
+            scheduleNextExactVakitTimer();
+        }, delayMs);
+    }
+}
+
+// Tarayıcının arka plan sekme kısıtlamalarını (timer throttling) aşmak için Web Worker tabanlı 10sn'lik kalp atışı
+function startBackgroundNotificationWorker() {
+    if (bgNotificationWorker) return;
+    try {
+        const workerCode = `
+            let timer = null;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    if (timer) clearInterval(timer);
+                    timer = setInterval(function() {
+                        self.postMessage('tick');
+                    }, 10000);
+                } else if (e.data === 'stop') {
+                    if (timer) clearInterval(timer);
+                    timer = null;
+                }
+            };
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        bgNotificationWorker = new Worker(workerUrl);
+        bgNotificationWorker.onmessage = () => {
+            checkPrayerTimeNotificationTrigger(new Date());
+        };
+        bgNotificationWorker.postMessage('start');
+    } catch (e) {
+        // Web Worker desteklenmiyorsa standart setInterval ve visibilitychange zaten devrede
+    }
+
+    // Sekme tekrar görünür olduğunda veya telefon ekranı uyandığında anında vakit kontrolü yap
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            checkPrayerTimeNotificationTrigger(new Date());
+            scheduleNextExactVakitTimer();
+        }
+    });
+    window.addEventListener('focus', () => {
+        checkPrayerTimeNotificationTrigger(new Date());
+        scheduleNextExactVakitTimer();
+    });
 }
 
 async function toggleNotifications() {
@@ -904,35 +1074,45 @@ async function toggleNotifications() {
         renderNotificationUI();
         showToast(
             state.notificationsEnabled ? 'Uygulama İçi Bildirimler Açıldı' : 'Bildirimler Kapatıldı',
-            'Tarayıcınız masaüstü bildirim API desteklemiyor ancak sesli ve ekran içi uyarılar aktif.',
+            'Tarayıcınız sistem bildirim API desteklemiyor ancak sesli ve ekran içi uyarılar aktif.',
             'emerald'
         );
         return;
     }
 
-    if (state.notificationsEnabled) {
+    // Bildirim zaten açıksa VE tarayıcı izni de gerçekten verilmişse kapat
+    if (state.notificationsEnabled && Notification.permission === 'granted') {
         state.notificationsEnabled = false;
         localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0');
         renderNotificationUI();
+        syncNotificationScheduleWithSW();
         showToast('Ezan Bildirimleri Kapatıldı', 'Vakit bildirimleri devre dışı bırakıldı.', 'amber');
         return;
     }
 
-    let perm = Notification.permission;
-    if (perm === 'default') {
-        perm = await Notification.requestPermission();
-    }
+    // Tarayıcıdan bildirim izni iste
+    const perm = await requestBrowserNotificationPermission();
 
     if (perm === 'granted') {
         state.notificationsEnabled = true;
         localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '1');
+        markAlreadyPastVakitsForToday(1);
         renderNotificationUI();
+        scheduleNextExactVakitTimer();
+        syncNotificationScheduleWithSW();
         sendEzanNotification(
             'Ezan Bildirimleri Aktif!',
             `${getCityById(state.selectedCity).name} için ezan vakitleri girdiğinde bildirim alacaksınız.`
         );
     } else {
-        showToast('Bildirim İzni Gerekli', 'Tarayıcı adres çubuğundan bildirim iznini "İzin Ver" olarak ayarlayın.', 'amber');
+        state.notificationsEnabled = false;
+        localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0');
+        renderNotificationUI();
+        showToast(
+            'Bildirim İzni Gerekli',
+            'Tarayıcı adres çubuğundaki kilit/ayar simgesinden Bildirim iznini "İzin Ver" olarak etkinleştirin.',
+            'amber'
+        );
     }
 }
 
@@ -945,14 +1125,27 @@ function renderNotificationUI() {
     const toneSelect = document.getElementById('soundToneSelect');
     const cityObj = getCityById(state.selectedCity);
 
-    if (state.notificationsEnabled) {
+    const hasBrowserSupport = 'Notification' in window;
+    const permissionGranted = !hasBrowserSupport || Notification.permission === 'granted';
+    const isEffectivelyActive = state.notificationsEnabled && permissionGranted;
+
+    if (isEffectivelyActive) {
         dot?.classList.remove('hidden');
         if (cardBtn) {
             cardBtn.textContent = 'Bildirim: Açık ✓';
             cardBtn.className = 'px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shrink-0';
         }
         if (subtext) {
-            subtext.textContent = `${cityObj.name} vakitleri için bildirimler aktif.`;
+            subtext.textContent = `${cityObj.name} vakitleri için ezan bildirimleri ve arka plan kontrolü aktif.`;
+        }
+    } else if (state.notificationsEnabled && hasBrowserSupport && Notification.permission !== 'granted') {
+        dot?.classList.add('hidden');
+        if (cardBtn) {
+            cardBtn.textContent = 'İzni Etkinleştir';
+            cardBtn.className = 'px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition shrink-0';
+        }
+        if (subtext) {
+            subtext.textContent = 'Ezan vakitlerinde bildirim gelebilmesi için tarayıcı bildirim iznini onaylayın.';
         }
     } else {
         dot?.classList.add('hidden');
@@ -980,19 +1173,24 @@ function renderNotificationUI() {
     }
 }
 
-// Dakika bazında ezan vakti kontrolü (Arka plan sayaç döngüsünden her saniye çağrılır)
+// Dakika ve gecikme toleranslı ezan vakti kontrolü (Arka plan kısıtlamalarında bile vakti kaçırmaz)
 function checkPrayerTimeNotificationTrigger(now) {
     if (!state.notificationsEnabled || !state.todayTimings) return;
+    if ('Notification' in window && Notification.permission === 'default') return;
 
     const todayKey = toDateKey(now);
-    const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
     const cityObj = getCityById(state.selectedCity);
 
     SIX_VAKIT_META.forEach((v) => {
         const vakitHM = state.todayTimings[v.key];
+        if (!vakitHM) return;
+        const vakitMinutes = timeStrToMinutes(vakitHM);
+        const diffMinutes = nowMinutes - vakitMinutes;
         const logKey = `${todayKey}_${state.selectedCity}_${v.key}`;
 
-        if (vakitHM === currentHM && !state.notifiedLog[logKey]) {
+        // Vakit tam girdiğinde VEYA arka plan zamanlayıcı gecikmesiyle 0-20 dk içinde yakalandığında bildirimi tetikle
+        if (diffMinutes >= 0 && diffMinutes <= 20 && !state.notifiedLog[logKey]) {
             state.notifiedLog[logKey] = true;
             try {
                 localStorage.setItem(STORAGE_KEYS.NOTIFIED_LOG, JSON.stringify(state.notifiedLog));
@@ -1003,6 +1201,7 @@ function checkPrayerTimeNotificationTrigger(now) {
                 v.notifTitle,
                 `${cityObj.name} için ${v.label} vakti girdi (${vakitHM}). Haydi namaza!`
             );
+            syncNotificationScheduleWithSW();
         }
     });
 }
@@ -1171,6 +1370,9 @@ async function syncPrayerTimings(forceRefresh = false) {
     }
 
     renderApiStatusBadge();
+    markAlreadyPastVakitsForToday(3);
+    scheduleNextExactVakitTimer();
+    syncNotificationScheduleWithSW();
     updateLiveClockAndCountdown();
     renderSixTimingsGrid();
     renderPrayerList();
@@ -2050,7 +2252,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=13', { updateViaCache: 'none' })
+            .register('./sw.js?v=14', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -3017,10 +3219,28 @@ const zikirState = {
     count: 0,
     target: 33,
     presetId: 'subhanallah',
-    feedbackEnabled: true
+    feedbackEnabled: true,
+    vibrationEnabled: true
 };
 
 let zikirAudioCtx = null;
+
+// Zikirmatik dokunma hissi / titreşim (Sessiz modda bile hafif haptic geri bildirim sağlar)
+function triggerZikirHaptic(isMilestone = false) {
+    if (zikirState.vibrationEnabled === false) return;
+    try {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+            if (isMilestone) {
+                navigator.vibrate(zikirState.feedbackEnabled ? [35, 50, 45] : [25, 40, 30]);
+            } else {
+                // Sessiz modda hafif ve kısa dokunma hissi (14ms), sesli modda 18ms
+                navigator.vibrate(zikirState.feedbackEnabled ? 18 : 14);
+            }
+        }
+    } catch (e) {
+        // Cihaz veya tarayıcı titreşimi desteklemiyorsa sessizce geç
+    }
+}
 
 // Zikirmatik butonuna her basıldığında Web Audio API ile üretilen zarif tesbih/tıklama sesi
 function playZikirClickSound(isCycleComplete = false) {
@@ -3095,6 +3315,9 @@ function loadZikirState() {
             if (typeof parsed.feedbackEnabled === 'boolean') {
                 zikirState.feedbackEnabled = parsed.feedbackEnabled;
             }
+            if (typeof parsed.vibrationEnabled === 'boolean') {
+                zikirState.vibrationEnabled = parsed.vibrationEnabled;
+            }
         }
     } catch (e) {
         console.error('Zikirmatik hafızası okunamadı:', e);
@@ -3110,6 +3333,7 @@ function saveZikirState() {
                 target: zikirState.target,
                 presetId: zikirState.presetId,
                 feedbackEnabled: zikirState.feedbackEnabled,
+                vibrationEnabled: zikirState.vibrationEnabled,
                 updatedAt: Date.now()
             })
         );
@@ -3122,17 +3346,35 @@ function toggleZikirFeedback() {
     zikirState.feedbackEnabled = !zikirState.feedbackEnabled;
     saveZikirState();
     renderZikirUI(false);
+    syncFeedbackToggleButtonsUI();
 
     if (zikirState.feedbackEnabled) {
         playZikirClickSound(false);
-        try {
-            navigator.vibrate?.(20);
-        } catch (e) {
-            // ignore
-        }
-        showToast('Ses & Titreşim Açıldı', 'Zikir butonuna her basıldığında zarif tıklama sesi ve titreşim aktif.', 'emerald');
+        triggerZikirHaptic(false);
+        showToast('Zikirmatik Sesi Açıldı', 'Her dokunuşta zarif tıklama sesi ve hafif titreşim aktif.', 'emerald');
     } else {
-        showToast('Ses & Titreşim Kapatıldı', 'Zikirmatik sessiz ve titreşimsiz moda alındı.', 'amber');
+        triggerZikirHaptic(false);
+        showToast(
+            'Zikirmatik Sessiz Moda Alındı',
+            zikirState.vibrationEnabled
+                ? 'Tıklama sesi kapatıldı; sessiz modda hafif dokunma titreşimi (haptic) aktif kalmaya devam ediyor.'
+                : 'Zikirmatik sessiz ve titreşimsiz modda.',
+            'amber'
+        );
+    }
+}
+
+function toggleZikirVibration() {
+    zikirState.vibrationEnabled = !zikirState.vibrationEnabled;
+    saveZikirState();
+    renderZikirUI(false);
+    syncFeedbackToggleButtonsUI();
+
+    if (zikirState.vibrationEnabled) {
+        triggerZikirHaptic(false);
+        showToast('Hafif Dokunma Titreşimi Açıldı', 'Sessiz modda dahi her zikirde hafif haptic titreşim verilecek.', 'emerald');
+    } else {
+        showToast('Titreşim Kapatıldı', 'Zikirmatik dokunma titreşimi tamamen devre dışı bırakıldı.', 'amber');
     }
 }
 
@@ -3164,31 +3406,10 @@ function renderZikirUI(animateCount = false) {
     const arabicEl = document.getElementById('zikirArabicText');
     const titleEl = document.getElementById('zikirTitleText');
     const meaningEl = document.getElementById('zikirMeaningText');
-    const feedbackBtn = document.getElementById('zikirFeedbackToggleBtn');
 
     if (!countEl) return;
 
-    // Ses & Titreşim Toggle Butonu Görünümü
-    if (feedbackBtn) {
-        if (zikirState.feedbackEnabled) {
-            feedbackBtn.className =
-                'px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer';
-            feedbackBtn.innerHTML = `
-                <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                <span>Ses & Titreşim: Açık</span>
-            `;
-        } else {
-            feedbackBtn.className =
-                'px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer';
-            feedbackBtn.innerHTML = `
-                <i data-lucide="volume-x" class="w-4 h-4 text-slate-400 shrink-0"></i>
-                <span>Ses & Titreşim: Kapalı</span>
-            `;
-        }
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
-    }
+    syncFeedbackToggleButtonsUI();
 
     const preset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
     if (arabicEl) arabicEl.textContent = preset.arabic;
@@ -3259,18 +3480,12 @@ function incrementZikir() {
     const target = zikirState.target || 33;
     const isCycleComplete = target !== MAX_ZIKIR_COUNT && zikirState.count % target === 0;
 
-    // Ses & Titreşim Açık ise Web Audio API tıklama sesi ve titreşimi çalıştır
+    // Sessiz modda bile hafif dokunma hissi / titreşim (haptic) çalışır (Titreşim anahtarı açık olduğu sürece)
+    triggerZikirHaptic(isCycleComplete);
+
+    // Ses Açık ise Web Audio API tıklama sesini çalıştır
     if (zikirState.feedbackEnabled) {
         playZikirClickSound(isCycleComplete);
-        try {
-            if (isCycleComplete) {
-                navigator.vibrate?.([35, 50, 45]);
-            } else {
-                navigator.vibrate?.(18);
-            }
-        } catch (e) {
-            // ignore
-        }
     }
 
     if (isCycleComplete) {
@@ -3570,8 +3785,8 @@ function getSpecialDuaCategoryById(catId) {
 }
 
 function syncFeedbackToggleButtonsUI() {
-    const btnIds = ['zikirFeedbackToggleBtn', 'specialDuaFeedbackToggleBtn'];
-    btnIds.forEach((id) => {
+    const soundBtnIds = ['zikirFeedbackToggleBtn', 'specialDuaFeedbackToggleBtn'];
+    soundBtnIds.forEach((id) => {
         const btn = document.getElementById(id);
         if (!btn) return;
         if (zikirState.feedbackEnabled) {
@@ -3579,17 +3794,39 @@ function syncFeedbackToggleButtonsUI() {
                 'px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer';
             btn.innerHTML = `
                 <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                <span>Ses & Titreşim: Açık</span>
+                <span>Ses: Açık</span>
+            `;
+        } else {
+            btn.className =
+                'px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer';
+            btn.innerHTML = `
+                <i data-lucide="volume-x" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                <span>Ses: Sessiz</span>
+            `;
+        }
+    });
+
+    const vibBtnIds = ['zikirVibrationToggleBtn', 'specialDuaVibrationToggleBtn'];
+    vibBtnIds.forEach((id) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        if (zikirState.vibrationEnabled) {
+            btn.className =
+                'px-3 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer';
+            btn.innerHTML = `
+                <i data-lucide="vibrate" class="w-4 h-4 text-teal-500 shrink-0"></i>
+                <span>Titreşim: Açık</span>
             `;
         } else {
             btn.className =
                 'px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer';
             btn.innerHTML = `
-                <i data-lucide="volume-x" class="w-4 h-4 text-slate-400 shrink-0"></i>
-                <span>Ses & Titreşim: Kapalı</span>
+                <i data-lucide="Smartphone" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                <span>Titreşim: Kapalı</span>
             `;
         }
     });
+
     if (window.lucide) {
         window.lucide.createIcons();
     }
@@ -3884,17 +4121,11 @@ function incrementSpecialDuaCount() {
     const justCompletedTarget = nextCount === dua.targetCount;
     renderSpecialDuaCounterView(true);
 
+    // Sessiz modda bile hafif dokunma hissi / titreşim (haptic) çalışır
+    triggerZikirHaptic(justCompletedTarget);
+
     if (zikirState.feedbackEnabled) {
         playZikirClickSound(justCompletedTarget);
-        try {
-            if (justCompletedTarget) {
-                navigator.vibrate?.([40, 55, 50]);
-            } else {
-                navigator.vibrate?.(18);
-            }
-        } catch (e) {
-            // ignore
-        }
     }
 
     if (justCompletedTarget) {
@@ -4251,6 +4482,10 @@ function setupEventListeners() {
         toggleZikirFeedback();
         syncFeedbackToggleButtonsUI();
     });
+    document.getElementById('specialDuaVibrationToggleBtn')?.addEventListener('click', () => {
+        toggleZikirVibration();
+        syncFeedbackToggleButtonsUI();
+    });
 
     document.getElementById('specialDuaTapBtn')?.addEventListener('click', incrementSpecialDuaCount);
     document.getElementById('specialDuaDecBtn')?.addEventListener('click', decrementSpecialDuaCount);
@@ -4261,6 +4496,10 @@ function setupEventListeners() {
     document.getElementById('zikirTapBtn')?.addEventListener('click', incrementZikir);
     document.getElementById('zikirFeedbackToggleBtn')?.addEventListener('click', () => {
         toggleZikirFeedback();
+        syncFeedbackToggleButtonsUI();
+    });
+    document.getElementById('zikirVibrationToggleBtn')?.addEventListener('click', () => {
+        toggleZikirVibration();
         syncFeedbackToggleButtonsUI();
     });
     document.getElementById('zikirDecBtn')?.addEventListener('click', decrementZikir);
@@ -4423,6 +4662,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchLiveZekatRates(false);
     startNewQuiz(true);
     setupEventListeners();
+    startBackgroundNotificationWorker();
     autoSyncMissedPrayersToKaza();
     renderAll();
     updateLiveClockAndCountdown();

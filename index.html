@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="BakVakitGeldi">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="manifest.json?v=13">
+    <link rel="manifest" href="manifest.json?v=14">
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
@@ -55,7 +55,7 @@
     <!-- Canvas Confetti (Quiz 5/5 Kutlaması İçin) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-[100svh] w-full max-w-full transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
 
@@ -826,11 +826,18 @@
 
                     <!-- Sağ Kontroller: Ses & Titreşim Toggle + Hedef Tur Seçici -->
                     <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                        <!-- Ses & Titreşim Aç/Kapat Toggle Butonu -->
-                        <button id="zikirFeedbackToggleBtn" type="button" title="Zikirmatik Ses ve Titreşim Efektini Aç / Kapat"
+                        <!-- Ses Aç/Sessiz Toggle Butonu -->
+                        <button id="zikirFeedbackToggleBtn" type="button" title="Zikirmatik Tıklama Sesini Aç / Sessize Al"
                             class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                             <i data-lucide="volume-2" id="zikirFeedbackIcon" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                            <span id="zikirFeedbackText">Ses & Titreşim: Açık</span>
+                            <span id="zikirFeedbackText">Ses: Açık</span>
+                        </button>
+
+                        <!-- Titreşim (Haptic) Aç/Kapat Toggle Butonu (Sessiz modda bile aktif kalır) -->
+                        <button id="zikirVibrationToggleBtn" type="button" title="Dokunma Titreşimini (Haptic) Aç / Kapat"
+                            class="px-3 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i data-lucide="vibrate" class="w-4 h-4 text-teal-500 shrink-0"></i>
+                            <span>Titreşim: Açık</span>
                         </button>
 
                         <!-- Hedef Tur Seçici -->
@@ -1036,11 +1043,19 @@
                             <span>Dua Listesine Dön</span>
                         </button>
 
-                        <button id="specialDuaFeedbackToggleBtn" type="button"
-                            class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                            <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                            <span>Ses & Titreşim: Açık</span>
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="specialDuaFeedbackToggleBtn" type="button"
+                                class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                                <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                                <span>Ses: Açık</span>
+                            </button>
+
+                            <button id="specialDuaVibrationToggleBtn" type="button"
+                                class="px-3 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                                <i data-lucide="vibrate" class="w-4 h-4 text-teal-500 shrink-0"></i>
+                                <span>Titreşim: Açık</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Okunan Duanın Detay Kartı (Zikir Çekerken Okunabilmesi İçin) -->
@@ -1268,6 +1283,6 @@
     </footer>
 
     <!-- Uygulama Scripti -->
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
 </body>
 </html>
