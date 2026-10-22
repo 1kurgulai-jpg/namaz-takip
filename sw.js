@@ -4,13 +4,13 @@
  * - İnternet olmadığında çevrimdışı (Offline Cache) çalışmaya devam eder.
  */
 
-const CACHE_NAME = 'bakvakitgeldi-pwa-v15';
+const CACHE_NAME = 'bakvakitgeldi-pwa-v19';
 const CORE_ASSETS = [
     './',
     './index.html',
-    './style.css?v=15',
-    './app.js?v=15',
-    './manifest.json?v=15',
+    './style.css?v=19',
+    './app.js?v=19',
+    './manifest.json?v=19',
     './logo.png?v=2'
 ];
 
@@ -107,6 +107,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
+    // Vercel Web Analytics (@vercel/analytics) isteklerini önbelleğe almadan doğrudan Vercel sunucusuna ilet
+    if (req.url.includes('/_vercel/')) return;
 
     const isSameOrigin = req.url.startsWith(self.location.origin);
 

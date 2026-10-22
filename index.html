@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="BakVakitGeldi">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="manifest.json?v=15">
+    <link rel="manifest" href="manifest.json?v=19">
     <link rel="icon" type="image/png" href="logo.png?v=2">
     <link rel="shortcut icon" type="image/png" href="logo.png?v=2">
     <link rel="apple-touch-icon" href="logo.png?v=2">
@@ -55,7 +55,12 @@
     <!-- Canvas Confetti (Quiz 5/5 Kutlaması İçin) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css?v=15">
+    <link rel="stylesheet" href="style.css?v=19">
+    <!-- Vercel Web Analytics (@vercel/analytics) -->
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js" data-sdkn="@vercel/analytics" data-sdkv="1.5.0"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-[100svh] w-full max-w-full transition-colors duration-300 selection:bg-emerald-500 selection:text-white">
 
@@ -414,7 +419,7 @@
                 </div>
 
                 <div id="kazaList" class="divide-y divide-slate-100 dark:divide-slate-800/80 mt-2">
-                    <!-- JS ile Sabah, Öğle, İkindi, Akşam, Yatsı, Vitir kaza sayaçları -->
+                    <!-- JS ile Sabah, Öğle, İkindi, Akşam, Yatsı (5 Vakit) kaza sayaçları -->
                 </div>
             </div>
         </section>
@@ -861,7 +866,7 @@
                 <!-- Hızlı Zikir / Tesbihat Seçim Çubuğu -->
                 <div class="space-y-2">
                     <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                        Zikir / Tesbihat Seçimi (İsteğe Bağlı)
+                        Zikir / Tesbihat Seçimi (Her Zikrin Sayacı Ayrı Kaydedilir)
                     </p>
                     <div id="zikirPresetPills" class="flex flex-wrap gap-1.5">
                         <!-- JS tarafından doldurulacak -->
@@ -1283,6 +1288,11 @@
     </footer>
 
     <!-- Uygulama Scripti -->
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=19"></script>
+    <!-- Vercel Web Analytics (@vercel/analytics) -->
+    <script type="module">
+        import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics@1.5.0/+esm';
+        inject();
+    </script>
 </body>
 </html>

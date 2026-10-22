@@ -19,7 +19,9 @@ const STORAGE_KEYS = {
     SOUND_TONE: 'bakvakitgeldi_sound_tone_v1',
     PWA_BANNER_DISMISSED: 'bakvakitgeldi_pwa_dismissed_v1',
     ZIKIR_STATE: 'bakvakitgeldi_zikir_state_v1',
-    SPECIAL_DUAS_PROGRESS: 'bakvakitgeldi_special_duas_progress_v1'
+    SPECIAL_DUAS_PROGRESS: 'bakvakitgeldi_special_duas_progress_v1',
+    KAZA_RESET_V2: 'bakvakitgeldi_kaza_reset_v2',
+    KAZA_START_DATE: 'bakvakitgeldi_kaza_start_date_v2'
 };
 
 // Firebase Firestore Bulut Yapılandırması (Varsayılan 공용 Firestore REST & Çok Katmanlı Bulut Yedekleme)
@@ -168,15 +170,24 @@ const PRAYERS = [
     }
 ];
 
-// Kaza Çetelesi Kategorileri
+// Kaza Çetelesi Kategorileri (Sadece 5 Vakit Farz Namazlar)
 const KAZA_TYPES = [
     { id: 'sabah', name: 'Sabah Namazı Kazası', detail: '2 Rekat Farz' },
     { id: 'ogle', name: 'Öğle Namazı Kazası', detail: '4 Rekat Farz' },
     { id: 'ikindi', name: 'İkindi Namazı Kazası', detail: '4 Rekat Farz' },
     { id: 'aksam', name: 'Akşam Namazı Kazası', detail: '3 Rekat Farz' },
-    { id: 'yatsi', name: 'Yatsı Namazı Kazası', detail: '4 Rekat Farz' },
-    { id: 'vitir', name: 'Vitir Namazı Kazası', detail: '3 Rekat Vacip' }
+    { id: 'yatsi', name: 'Yatsı Namazı Kazası', detail: '4 Rekat Farz' }
 ];
+
+function sanitizeKazaCounts(rawCounts = {}) {
+    return {
+        sabah: Math.max(0, Number(rawCounts.sabah) || 0),
+        ogle: Math.max(0, Number(rawCounts.ogle) || 0),
+        ikindi: Math.max(0, Number(rawCounts.ikindi) || 0),
+        aksam: Math.max(0, Number(rawCounts.aksam) || 0),
+        yatsi: Math.max(0, Number(rawCounts.yatsi) || 0)
+    };
+}
 
 // Yerel YYYY-MM-DD formatında tarih üretici
 function toDateKey(dateObj) {
@@ -254,9 +265,9 @@ const state = {
         ogle: 0,
         ikindi: 0,
         aksam: 0,
-        yatsi: 0,
-        vitir: 0
+        yatsi: 0
     },
+    kazaStartDate: toDateKey(new Date()),
     timingsCache: {},
     selectedDateTimings: getFallbackTimings('Istanbul'),
     todayTimings: getFallbackTimings('Istanbul'),
@@ -445,7 +456,9 @@ function scheduleCloudSync() {
     const payload = {
         uuid: state.deviceUuid,
         dailyRecords: state.dailyRecords,
-        kazaCounts: state.kazaCounts,
+        kazaCounts: sanitizeKazaCounts(state.kazaCounts),
+        kazaStartDate: state.kazaStartDate,
+        kazaResetVersion: 2,
         selectedCity: state.selectedCity,
         updatedAt: state.updatedAt
     };
@@ -526,24 +539,27 @@ async function restoreFromCloudIfNeeded(showNotification = false) {
         || Object.values(state.kazaCounts).some((v) => v > 0);
 
     if (restoredPayload) {
+        const isCloudV2 = restoredPayload.kazaResetVersion === 2;
         const cloudIsNewer = (restoredPayload.updatedAt || 0) > (state.updatedAt || 0);
-        if (!localHasData || cloudIsNewer) {
+        if (isCloudV2 && (!localHasData || cloudIsNewer)) {
             applyRestoredPayload(restoredPayload, showNotification || !localHasData);
             updateCloudStatusUI('synced', 'Bulut yedeğinden verileriniz otomatik geri yüklendi ✓');
             return;
         }
     }
 
-    // Eğer yerelde veri varsa bulut katmanlarını da eşitle
-    if (localHasData) {
-        saveToIndexedDB(state.deviceUuid, {
-            uuid: state.deviceUuid,
-            dailyRecords: state.dailyRecords,
-            kazaCounts: state.kazaCounts,
-            selectedCity: state.selectedCity,
-            updatedAt: state.updatedAt || Date.now()
-        });
-    }
+    // Eğer yerelde veri varsa veya buluttaki yedek eski sürümse bulut katmanlarını güncel v2 ile eşitle
+    const syncPayload = {
+        uuid: state.deviceUuid,
+        dailyRecords: state.dailyRecords,
+        kazaCounts: sanitizeKazaCounts(state.kazaCounts),
+        kazaStartDate: state.kazaStartDate,
+        kazaResetVersion: 2,
+        selectedCity: state.selectedCity,
+        updatedAt: state.updatedAt || Date.now()
+    };
+    saveToIndexedDB(state.deviceUuid, syncPayload);
+    pushPayloadToCloud(syncPayload);
 
     updateCloudStatusUI('synced');
 }
@@ -553,9 +569,13 @@ function applyRestoredPayload(payload, notifyUser = false) {
         state.dailyRecords = { ...state.dailyRecords, ...payload.dailyRecords };
         saveDailyRecords(false);
     }
-    if (payload.kazaCounts && typeof payload.kazaCounts === 'object') {
-        state.kazaCounts = { ...state.kazaCounts, ...payload.kazaCounts };
+    if (payload.kazaResetVersion === 2 && payload.kazaCounts && typeof payload.kazaCounts === 'object') {
+        state.kazaCounts = sanitizeKazaCounts(payload.kazaCounts);
         saveKazaCounts(false);
+    }
+    if (payload.kazaStartDate && typeof payload.kazaStartDate === 'string') {
+        state.kazaStartDate = payload.kazaStartDate;
+        localStorage.setItem(STORAGE_KEYS.KAZA_START_DATE, payload.kazaStartDate);
     }
     if (payload.selectedCity && CITIES.some((c) => c.id === payload.selectedCity)) {
         state.selectedCity = payload.selectedCity;
@@ -1219,7 +1239,62 @@ function loadFromStorage() {
 
         const savedKaza = localStorage.getItem(STORAGE_KEYS.KAZA_COUNTS);
         if (savedKaza) {
-            state.kazaCounts = { ...state.kazaCounts, ...JSON.parse(savedKaza) };
+            state.kazaCounts = sanitizeKazaCounts(JSON.parse(savedKaza));
+        }
+
+        const savedStartDate = localStorage.getItem(STORAGE_KEYS.KAZA_START_DATE);
+        if (savedStartDate) {
+            state.kazaStartDate = savedStartDate;
+        }
+
+        // Kaza Borçlarının Sıfırlanması (v2): Eski birikmiş tüm kaza borçlarını ve Vitir kaydını sıfırla, bugünden itibaren takip başlat
+        const isKazaResetV2Done = localStorage.getItem(STORAGE_KEYS.KAZA_RESET_V2) === '1';
+        if (!isKazaResetV2Done) {
+            const now = new Date();
+            const todayKey = toDateKey(now);
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const fallbackTimings = getFallbackTimings(state.selectedCity);
+            const endThresholds = {
+                sabah: timeStrToMinutes(fallbackTimings.gunes),
+                ogle: timeStrToMinutes(fallbackTimings.ikindi),
+                ikindi: timeStrToMinutes(fallbackTimings.aksam),
+                aksam: timeStrToMinutes(fallbackTimings.yatsi),
+                yatsi: 24 * 60 + 60
+            };
+
+            state.kazaCounts = { sabah: 0, ogle: 0, ikindi: 0, aksam: 0, yatsi: 0 };
+            state.kazaStartDate = todayKey;
+
+            Object.keys(state.dailyRecords).forEach((dateKey) => {
+                const rec = state.dailyRecords[dateKey];
+                if (!rec) return;
+                rec.missed = { sabah: false, ogle: false, ikindi: false, aksam: false, yatsi: false };
+                rec.kazaAdded = { sabah: false, ogle: false, ikindi: false, aksam: false, yatsi: false };
+                if (dateKey === todayKey) {
+                    if (!rec.manualReset) rec.manualReset = {};
+                    Object.keys(endThresholds).forEach((pid) => {
+                        if (nowMinutes >= endThresholds[pid]) {
+                            rec.manualReset[pid] = true;
+                        }
+                    });
+                }
+            });
+
+            if (!state.dailyRecords[todayKey]) {
+                const todayRec = getDayRecord(todayKey);
+                todayRec.manualReset = {};
+                Object.keys(endThresholds).forEach((pid) => {
+                    if (nowMinutes >= endThresholds[pid]) {
+                        todayRec.manualReset[pid] = true;
+                    }
+                });
+            }
+
+            localStorage.setItem(STORAGE_KEYS.KAZA_RESET_V2, '1');
+            localStorage.setItem(STORAGE_KEYS.KAZA_START_DATE, todayKey);
+            localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS, JSON.stringify(state.dailyRecords));
+            localStorage.setItem(STORAGE_KEYS.KAZA_COUNTS, JSON.stringify(state.kazaCounts));
+            state.updatedAt = Date.now();
         }
 
         const savedCity = localStorage.getItem(STORAGE_KEYS.SELECTED_CITY);
@@ -1263,6 +1338,7 @@ function saveDailyRecords(triggerCloud = true) {
 
 function saveKazaCounts(triggerCloud = true) {
     try {
+        state.kazaCounts = sanitizeKazaCounts(state.kazaCounts);
         localStorage.setItem(STORAGE_KEYS.KAZA_COUNTS, JSON.stringify(state.kazaCounts));
         if (triggerCloud) scheduleCloudSync();
     } catch (err) {
@@ -1662,8 +1738,10 @@ function autoSyncMissedPrayersToKaza() {
     };
 
     let anyChanged = false;
+    const startDateKey = state.kazaStartDate || todayKey;
 
     Object.keys(state.dailyRecords).forEach((dateKey) => {
+        if (dateKey < startDateKey) return; // Sıfırlama tarihinden önceki geçmiş günleri kaza hesabına dahil etme
         if (dateKey > todayKey) return; // Gelecek günleri atla
         const rec = getDayRecord(dateKey);
 
@@ -2150,6 +2228,7 @@ function setSelectedCity(cityId) {
     } catch (e) {
         console.error(e);
     }
+    trackVercelEvent('City_Select', { city: cityId });
     updateQiblaForSelectedCity();
     renderNotificationUI();
     syncPrayerTimings(false);
@@ -2201,6 +2280,7 @@ function setPrayerDecision(prayerId, decision) {
     }
 
     saveDailyRecords(true);
+    trackVercelEvent('Prayer_Decision', { prayer: prayerId, status: decision, city: state.selectedCity });
     renderCalendarSection();
     renderProgressBar();
     renderPrayerList(prayerId);
@@ -2252,7 +2332,7 @@ function initPWA() {
         });
 
         navigator.serviceWorker
-            .register('./sw.js?v=15', { updateViaCache: 'none' })
+            .register('./sw.js?v=19', { updateViaCache: 'none' })
             .then((reg) => {
                 // Uygulama her açıldığında Vercel'deki son sürümü anında denetle
                 reg.update().catch(() => null);
@@ -3165,6 +3245,13 @@ const MAX_ZIKIR_COUNT = 99999;
 
 const ZIKIR_PRESETS = [
     {
+        id: 'serbest',
+        title: 'Serbest Zikir',
+        arabic: 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ',
+        meaning: 'Dilediğiniz zikir ve tesbihat için 99.999 kapasiteli bağımsız serbest sayaç.',
+        defaultTarget: 99999
+    },
+    {
         id: 'subhanallah',
         title: 'Sübhânallah',
         arabic: 'سُبْحَانَ اللّٰهِ',
@@ -3205,23 +3292,62 @@ const ZIKIR_PRESETS = [
         arabic: 'اَللّٰهُمَّ صَلِّ عَلٰى سَيِّدِنَا مُحَمَّدٍ',
         meaning: "Allah'ım! Efendimiz Muhammed'e (s.a.v.) salât ve selam eyle.",
         defaultTarget: 100
-    },
-    {
-        id: 'serbest',
-        title: 'Serbest Sayaç',
-        arabic: 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ',
-        meaning: 'Dilediğiniz zikir ve tesbihat için 99.999 kapasiteli serbest sayaç.',
-        defaultTarget: 99999
     }
 ];
 
+function createDefaultZikirCountsMap() {
+    const map = {};
+    ZIKIR_PRESETS.forEach((p) => {
+        map[p.id] = 0;
+    });
+    return map;
+}
+
+function createDefaultZikirTargetsMap() {
+    const map = {};
+    ZIKIR_PRESETS.forEach((p) => {
+        map[p.id] = p.defaultTarget;
+    });
+    return map;
+}
+
 const zikirState = {
     count: 0,
-    target: 33,
-    presetId: 'subhanallah',
+    target: 99999,
+    presetId: 'serbest',
+    countsByPreset: createDefaultZikirCountsMap(),
+    targetsByPreset: createDefaultZikirTargetsMap(),
     feedbackEnabled: true,
     vibrationEnabled: true
 };
+
+function syncActiveZikirFromMap() {
+    const activePreset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
+    zikirState.presetId = activePreset.id;
+    const savedCount = Number(zikirState.countsByPreset[activePreset.id]);
+    zikirState.count = !Number.isNaN(savedCount) && savedCount >= 0
+        ? Math.min(MAX_ZIKIR_COUNT, Math.floor(savedCount))
+        : 0;
+    zikirState.countsByPreset[activePreset.id] = zikirState.count;
+
+    const savedTarget = Number(zikirState.targetsByPreset[activePreset.id]);
+    zikirState.target = !Number.isNaN(savedTarget) && savedTarget > 0
+        ? savedTarget
+        : activePreset.defaultTarget;
+    zikirState.targetsByPreset[activePreset.id] = zikirState.target;
+}
+
+function setActiveZikirCount(newCount) {
+    const clamped = Math.max(0, Math.min(MAX_ZIKIR_COUNT, Math.floor(Number(newCount) || 0)));
+    zikirState.count = clamped;
+    zikirState.countsByPreset[zikirState.presetId] = clamped;
+}
+
+function setActiveZikirTarget(newTarget) {
+    const validTarget = Number(newTarget) > 0 ? Number(newTarget) : 33;
+    zikirState.target = validTarget;
+    zikirState.targetsByPreset[zikirState.presetId] = validTarget;
+}
 
 let zikirAudioCtx = null;
 let iosHapticLabelEl = null;
@@ -3334,18 +3460,39 @@ function playZikirClickSound(isCycleComplete = false) {
 
 function loadZikirState() {
     try {
+        zikirState.countsByPreset = createDefaultZikirCountsMap();
+        zikirState.targetsByPreset = createDefaultZikirTargetsMap();
+
         const raw = localStorage.getItem(STORAGE_KEYS.ZIKIR_STATE);
         if (raw) {
             const parsed = JSON.parse(raw);
-            if (typeof parsed.count === 'number' && !Number.isNaN(parsed.count)) {
-                zikirState.count = Math.max(0, Math.min(MAX_ZIKIR_COUNT, Math.floor(parsed.count)));
-            }
-            if (typeof parsed.target === 'number' && parsed.target > 0) {
-                zikirState.target = parsed.target;
-            }
             if (typeof parsed.presetId === 'string' && ZIKIR_PRESETS.some((p) => p.id === parsed.presetId)) {
                 zikirState.presetId = parsed.presetId;
             }
+
+            if (parsed.countsByPreset && typeof parsed.countsByPreset === 'object') {
+                ZIKIR_PRESETS.forEach((p) => {
+                    const val = Number(parsed.countsByPreset[p.id]);
+                    if (!Number.isNaN(val) && val >= 0) {
+                        zikirState.countsByPreset[p.id] = Math.min(MAX_ZIKIR_COUNT, Math.floor(val));
+                    }
+                });
+            } else if (typeof parsed.count === 'number' && !Number.isNaN(parsed.count)) {
+                // Eski tekli sayaç verisini aktif zikir türüne aktar
+                zikirState.countsByPreset[zikirState.presetId] = Math.max(0, Math.min(MAX_ZIKIR_COUNT, Math.floor(parsed.count)));
+            }
+
+            if (parsed.targetsByPreset && typeof parsed.targetsByPreset === 'object') {
+                ZIKIR_PRESETS.forEach((p) => {
+                    const tVal = Number(parsed.targetsByPreset[p.id]);
+                    if (!Number.isNaN(tVal) && tVal > 0) {
+                        zikirState.targetsByPreset[p.id] = tVal;
+                    }
+                });
+            } else if (typeof parsed.target === 'number' && parsed.target > 0) {
+                zikirState.targetsByPreset[zikirState.presetId] = parsed.target;
+            }
+
             if (typeof parsed.feedbackEnabled === 'boolean') {
                 zikirState.feedbackEnabled = parsed.feedbackEnabled;
             }
@@ -3353,6 +3500,8 @@ function loadZikirState() {
                 zikirState.vibrationEnabled = parsed.vibrationEnabled;
             }
         }
+
+        syncActiveZikirFromMap();
     } catch (e) {
         console.error('Zikirmatik hafızası okunamadı:', e);
     }
@@ -3360,12 +3509,17 @@ function loadZikirState() {
 
 function saveZikirState() {
     try {
+        zikirState.countsByPreset[zikirState.presetId] = zikirState.count;
+        zikirState.targetsByPreset[zikirState.presetId] = zikirState.target;
+
         localStorage.setItem(
             STORAGE_KEYS.ZIKIR_STATE,
             JSON.stringify({
                 count: zikirState.count,
                 target: zikirState.target,
                 presetId: zikirState.presetId,
+                countsByPreset: zikirState.countsByPreset,
+                targetsByPreset: zikirState.targetsByPreset,
                 feedbackEnabled: zikirState.feedbackEnabled,
                 vibrationEnabled: zikirState.vibrationEnabled,
                 updatedAt: Date.now()
@@ -3419,13 +3573,24 @@ function renderZikirPresetPills() {
     container.innerHTML = '';
     ZIKIR_PRESETS.forEach((preset) => {
         const isActive = preset.id === zikirState.presetId;
+        const savedCount = zikirState.countsByPreset?.[preset.id] || 0;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.setAttribute('data-zikir-preset', preset.id);
         btn.className = isActive
-            ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition'
-            : 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition';
-        btn.textContent = preset.title;
+            ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition flex items-center gap-1.5 cursor-pointer'
+            : 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition flex items-center gap-1.5 cursor-pointer';
+
+        const countBadgeClass = isActive
+            ? 'px-1.5 py-0.5 rounded-md text-[10px] font-mono font-extrabold bg-white/20 text-white'
+            : savedCount > 0
+            ? 'px-1.5 py-0.5 rounded-md text-[10px] font-mono font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+            : 'px-1.5 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-400';
+
+        btn.innerHTML = `
+            <span>${preset.title}</span>
+            <span class="${countBadgeClass}">${savedCount.toLocaleString('tr-TR')}</span>
+        `;
         container.appendChild(btn);
     });
 }
@@ -3517,17 +3682,19 @@ function incrementZikir() {
     }
 
     // 2. Ardından sayacı artır, kaydet ve ekranı güncelle
-    zikirState.count = nextCount;
+    setActiveZikirCount(nextCount);
     saveZikirState();
+    renderZikirPresetPills();
     renderZikirUI(true);
 
     // Sıfırlama onay kutusu açıksa kapat
     document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
 
     if (isCycleComplete) {
+        const activePreset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
         showToast(
             'Tesbih Turu Tamamlandı ✨',
-            `${zikirState.count.toLocaleString('tr-TR')} zikre ulaştınız (${Math.floor(zikirState.count / target)}. tur). Allah kabul etsin.`,
+            `${activePreset.title}: ${zikirState.count.toLocaleString('tr-TR')} zikre ulaştınız (${Math.floor(zikirState.count / target)}. tur). Allah kabul etsin.`,
             'emerald'
         );
     }
@@ -3535,8 +3702,9 @@ function incrementZikir() {
 
 function decrementZikir() {
     if (zikirState.count <= 0) return;
-    zikirState.count = Math.max(0, zikirState.count - 1);
+    setActiveZikirCount(zikirState.count - 1);
     saveZikirState();
+    renderZikirPresetPills();
     renderZikirUI(false);
 }
 
@@ -3545,23 +3713,27 @@ function openZikirResetConfirm() {
     const confirmText = document.getElementById('zikirResetConfirmText');
     if (!confirmBox) return;
 
+    const activePreset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
+
     if (zikirState.count === 0) {
-        showToast('Sayaç Zaten 0', 'Zikirmatik sayacı şu anda 0 durumunda.', 'emerald');
+        showToast('Sayaç Zaten 0', `${activePreset.title} sayacı şu anda 0 durumunda.`, 'emerald');
         return;
     }
 
     if (confirmText) {
-        confirmText.innerHTML = `Mevcut zikir sayacınız (<strong>${zikirState.count.toLocaleString('tr-TR')}</strong>) <strong>0</strong> olarak sıfırlanacak. Emin misiniz?`;
+        confirmText.innerHTML = `<strong>${activePreset.title}</strong> sayacınız (<strong>${zikirState.count.toLocaleString('tr-TR')}</strong>) <strong>0</strong> olarak sıfırlanacak. Diğer zikir sayaçlarınız etkilenmez. Emin misiniz?`;
     }
     confirmBox.classList.remove('hidden');
 }
 
 function confirmZikirReset() {
-    zikirState.count = 0;
+    const activePreset = ZIKIR_PRESETS.find((p) => p.id === zikirState.presetId) || ZIKIR_PRESETS[0];
+    setActiveZikirCount(0);
     saveZikirState();
+    renderZikirPresetPills();
     renderZikirUI(false);
     document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
-    showToast('Sayaç Sıfırlandı', 'Dijital Zikirmatik sayacı 0 olarak sıfırlandı.', 'emerald');
+    showToast('Sayaç Sıfırlandı', `${activePreset.title} sayacı 0 olarak sıfırlandı.`, 'emerald');
 }
 
 // ============================================================================
@@ -4267,8 +4439,39 @@ function switchMainTab(tabName) {
         renderZikirUI(false);
     }
 
+    trackVercelEvent('Tab_View', { tab: tabName, city: state.selectedCity });
+
     if (window.scrollY > 40) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+// Vercel Web Analytics (@vercel/analytics) Başlatma & Etkinlik Takibi
+function initVercelAnalytics() {
+    try {
+        window.va = window.va || function () {
+            (window.vaq = window.vaq || []).push(arguments);
+        };
+        if (!document.querySelector('script[src*="/_vercel/insights/script.js"]')) {
+            const script = document.createElement('script');
+            script.src = '/_vercel/insights/script.js';
+            script.defer = true;
+            script.setAttribute('data-sdkn', '@vercel/analytics');
+            script.setAttribute('data-sdkv', '1.5.0');
+            document.head.appendChild(script);
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+function trackVercelEvent(eventName, data = {}) {
+    try {
+        if (typeof window.va === 'function') {
+            window.va('event', { name: eventName, data });
+        }
+    } catch (e) {
+        // ignore
     }
 }
 
@@ -4550,7 +4753,7 @@ function setupEventListeners() {
     document.getElementById('zikirTargetSelect')?.addEventListener('change', (e) => {
         const val = Number(e.target.value);
         if (val > 0) {
-            zikirState.target = val;
+            setActiveZikirTarget(val);
             saveZikirState();
             renderZikirUI(false);
         }
@@ -4563,7 +4766,8 @@ function setupEventListeners() {
         const found = ZIKIR_PRESETS.find((p) => p.id === presetId);
         if (found) {
             zikirState.presetId = found.id;
-            zikirState.target = found.defaultTarget;
+            syncActiveZikirFromMap();
+            document.getElementById('zikirResetConfirmBox')?.classList.add('hidden');
             saveZikirState();
             renderZikirPresetPills();
             renderZikirUI(false);
@@ -4688,6 +4892,7 @@ function setupEventListeners() {
 
 // Başlat
 document.addEventListener('DOMContentLoaded', () => {
+    initVercelAnalytics();
     initTheme();
     initDeviceUuid();
     loadFromStorage();

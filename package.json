@@ -1,0 +1,9 @@
+{
+  "name": "bakvakitgeldi",
+  "version": "1.19.0",
+  "private": true,
+  "description": "BakVakitGeldi — 81 İl Diyanet Namaz Vakitleri, Kaza Takibi, Kıble Pusulası, Zekat, Zikirmatik & Dini Quiz Uygulaması",
+  "dependencies": {
+    "@vercel/analytics": "^1.5.0"
+  }
+}
